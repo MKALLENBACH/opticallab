@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { loginAction } from '@/actions/auth';
-import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
@@ -32,86 +31,111 @@ export function LoginForm() {
     <div className="auth-theme w-full">
       <style dangerouslySetInnerHTML={{__html: `
         .auth-theme {
-          --color-bg-surface: rgba(20, 22, 31, 0.4);
-          --color-bg-surface-2: rgba(30, 32, 48, 0.6);
-          --color-text-base: #ffffff;
-          --color-text-secondary: rgba(255,255,255,0.85);
-          --color-text-muted: rgba(255,255,255,0.5);
-          --color-text-subtle: rgba(255,255,255,0.3);
-          --color-border: rgba(255,255,255,0.1);
-          --color-border-hover: rgba(255,255,255,0.2);
-          --color-border-focus: #818cf8;
           --color-primary-light: rgba(129,140,248,0.2);
         }
+        .auth-form {
+          gap: 1.5rem;
+        }
+        .auth-field-group {
+          gap: 1.25rem;
+        }
+        .auth-control {
+          gap: 0.625rem;
+        }
+        .auth-field {
+          padding-left: 3rem !important;
+        }
+        .auth-field-email {
+          padding-right: 1rem !important;
+        }
+        .auth-field-password {
+          padding-right: 4rem !important;
+        }
+        .auth-forgot-row {
+          padding-top: 0.25rem;
+        }
+        .auth-submit-area {
+          gap: 1.5rem;
+          padding-top: 0.25rem;
+        }
         .auth-btn-gradient {
-          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
-          border: 1px solid rgba(139, 92, 246, 0.3) !important;
-          box-shadow: 0 8px 32px -8px rgba(99, 102, 241, 0.6), inset 0 1px 1px rgba(255,255,255,0.2) !important;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          background: linear-gradient(135deg, #3b82f6 0%, #6366f1 45%, #9333ea 100%) !important;
+          border: 1px solid rgba(196, 181, 253, 0.26) !important;
+          box-shadow: 0 16px 34px -18px rgba(59,130,246,0.95), 0 16px 38px -18px rgba(147,51,234,0.85), inset 0 1px 1px rgba(255,255,255,0.24) !important;
+          transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease !important;
         }
         .auth-btn-gradient:hover:not(:disabled) {
-          box-shadow: 0 12px 36px -8px rgba(99, 102, 241, 0.8), inset 0 1px 1px rgba(255,255,255,0.3) !important;
-          transform: translateY(-2px);
-          filter: brightness(1.05);
+          box-shadow: 0 20px 42px -18px rgba(59,130,246,1), 0 22px 44px -18px rgba(147,51,234,0.95), inset 0 1px 1px rgba(255,255,255,0.32) !important;
+          filter: brightness(1.04);
+          transform: translateY(-1px);
+        }
+        .auth-field:-webkit-autofill,
+        .auth-field:-webkit-autofill:hover,
+        .auth-field:-webkit-autofill:focus {
+          -webkit-text-fill-color: #fff;
+          box-shadow: 0 0 0 1000px rgba(2,6,23,0.88) inset;
+          transition: background-color 9999s ease-in-out 0s;
         }
       `}} />
-      <form onSubmit={handleSubmit} className="flex flex-col gap-7 w-full">
-        {/* Error banner */}
+
+      <form onSubmit={handleSubmit} className="auth-form flex w-full flex-col">
         {error && (
-          <div
-            className="flex items-start gap-3 px-4 py-3.5 rounded-[12px] border text-sm animate-slide-up"
-            style={{
-              background: 'rgba(239,68,68,0.15)',
-              borderColor: 'rgba(239,68,68,0.3)',
-              color: '#fca5a5',
-            }}
-          >
-            <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
+          <div className="flex animate-slide-up items-start gap-3 rounded-2xl border border-red-400/25 bg-red-500/12 px-4 py-3.5 text-sm text-red-200">
+            <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
             <span className="font-medium leading-relaxed">{error}</span>
           </div>
         )}
 
-        <div className="flex flex-col gap-5">
-          {/* Email */}
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            required
-            placeholder="seu@email.com"
-            autoComplete="email"
-            disabled={isLoading}
-            leftIcon={<Mail size={20} />}
-          />
+        <div className="auth-field-group flex flex-col">
+          <div className="auth-control flex flex-col">
+            <label htmlFor="login-email" className="block text-sm font-bold text-white/90">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                required
+                placeholder="seu@email.com"
+                autoComplete="email"
+                disabled={isLoading}
+                className="auth-field auth-field-email h-14 w-full rounded-2xl border border-white/10 bg-black/25 text-[1rem] font-medium text-white outline-none transition placeholder:text-slate-500 hover:border-white/18 focus:border-violet-300/70 focus:bg-black/32 focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+          </div>
 
-          {/* Password */}
-          <div className="flex flex-col gap-2.5">
-            <Input
-              label="Senha"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              required
-              placeholder="••••••••"
-              autoComplete="current-password"
-              disabled={isLoading}
-              leftIcon={<Lock size={20} />}
-              rightElement={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  className="p-2 hover:text-white transition-colors text-white/60 hover:bg-white/10 rounded-xl"
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              }
-            />
-            {/* Forgot password */}
-            <div className="flex justify-end">
+          <div className="auth-control flex flex-col">
+            <label htmlFor="login-password" className="block text-sm font-bold text-white/90">
+              Senha
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                id="login-password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                placeholder="••••••••"
+                autoComplete="current-password"
+                disabled={isLoading}
+                className="auth-field auth-field-password h-14 w-full rounded-2xl border border-white/10 bg-black/25 text-[1rem] font-medium text-white outline-none transition placeholder:text-slate-500 hover:border-white/18 focus:border-violet-300/70 focus:bg-black/32 focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                disabled={isLoading}
+                className="absolute right-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+            <div className="auth-forgot-row flex justify-end">
               <a
                 href="#"
-                className="text-[0.85rem] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors py-1 px-1 rounded-md hover:bg-white/5"
+                className="rounded-md px-1 py-1 text-[0.88rem] font-semibold text-indigo-300 transition hover:bg-white/5 hover:text-white"
               >
                 Esqueceu a senha?
               </a>
@@ -119,28 +143,30 @@ export function LoginForm() {
           </div>
         </div>
 
-        {/* Submit Area */}
-        <div className="flex flex-col gap-5 mt-2">
+        <div className="auth-submit-area flex flex-col">
           <Button
             type="submit"
             size="lg"
             isLoading={isLoading}
-            className="w-full auth-btn-gradient text-white rounded-[14px] h-[56px] font-bold text-[1.05rem] flex items-center justify-center gap-2.5 group"
+            className="auth-btn-gradient group h-14 w-full rounded-2xl text-[1.04rem] font-bold text-white"
           >
             {isLoading ? 'Entrando...' : (
               <>
                 Entrar na plataforma
-                <ArrowRight size={18} className="opacity-90 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight size={19} className="opacity-90 transition-transform group-hover:translate-x-1" />
               </>
             )}
           </Button>
 
-          {/* Footer info */}
-          <div className="flex items-center justify-center gap-2 text-white/30 pt-1">
-            <Lock size={14} className="opacity-80" />
-            <p className="text-[0.85rem] font-medium tracking-wide">
-              Acesso restrito a usuários autorizados
-            </p>
+          <div className="flex items-center gap-4 text-white/35">
+            <div className="h-px flex-1 bg-white/10" />
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <Lock size={14} className="opacity-80" />
+              <p className="text-[0.84rem] font-medium tracking-wide">
+                Acesso restrito a usuários autorizados
+              </p>
+            </div>
+            <div className="h-px flex-1 bg-white/10" />
           </div>
         </div>
       </form>

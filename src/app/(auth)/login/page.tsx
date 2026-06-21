@@ -5,97 +5,120 @@ export const metadata = {
   description: 'Acesse a plataforma de gestão óptica LenteLink.',
 };
 
+function LogoMark({ gradientId }: { gradientId: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="100%" stopColor="#8b5cf6" />
+        </linearGradient>
+      </defs>
+      <circle cx="22" cy="32" r="14" stroke={`url(#${gradientId})`} strokeWidth="4" fill="none" />
+      <circle cx="42" cy="32" r="14" stroke={`url(#${gradientId})`} strokeWidth="4" fill="none" />
+      <circle cx="32" cy="32" r="5" fill={`url(#${gradientId})`} />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   return (
-    <div className="w-full relative z-20">
+    <div className="relative z-20 w-full">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .login-mobile-brand {
+          margin-bottom: 2rem;
+        }
+        .login-card {
+          border-radius: 28px;
+        }
+        .login-card-inner {
+          padding: 2.25rem 1.75rem;
+        }
+        .login-icon-row {
+          margin-bottom: 1.75rem;
+        }
+        .login-heading {
+          margin-bottom: 2.25rem;
+        }
+        .login-heading p {
+          margin-top: 0.5rem;
+        }
+        .login-title {
+          font-size: clamp(1.85rem, 2.2vw, 2.15rem) !important;
+          line-height: 1.18 !important;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+        }
+        .login-mobile-footer {
+          margin-top: 1.75rem;
+        }
+        @media (min-width: 640px) {
+          .login-card {
+            border-radius: 34px;
+          }
+          .login-card-inner {
+            padding: 2.75rem 2.5rem;
+          }
+        }
+        @media (min-width: 1280px) {
+          .login-card-inner {
+            padding: 3rem;
+          }
+        }
+        @media (min-width: 1024px) {
+          .login-mobile-brand,
+          .login-mobile-footer {
+            display: none;
+          }
+        }
+      ` }} />
 
-      {/* Mobile-only logo */}
-      <div className="lg:hidden mb-10 flex justify-center items-center gap-3">
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 64 64" fill="none">
-          <defs>
-            <linearGradient id="ll-mob" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#6366f1"/>
-              <stop offset="100%" stopColor="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-          <circle cx="22" cy="32" r="14" stroke="url(#ll-mob)" strokeWidth="4" fill="none"/>
-          <circle cx="42" cy="32" r="14" stroke="url(#ll-mob)" strokeWidth="4" fill="none"/>
-          <circle cx="32" cy="32" r="5" fill="url(#ll-mob)"/>
-        </svg>
-        <span className="font-bold text-[1.75rem] tracking-tight">
-          <span style={{ color: '#fff' }}>Lente</span>
-          <span style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Link</span>
+      <div className="login-mobile-brand flex items-center justify-center gap-3">
+        <LogoMark gradientId="ll-mobile-login" />
+        <span className="text-[1.75rem] font-bold tracking-tight">
+          <span className="text-white">Lente</span>
+          <span className="bg-[linear-gradient(135deg,#818cf8,#c084fc)] bg-clip-text text-transparent">Link</span>
         </span>
       </div>
 
-      {/* Premium Glass card */}
-      <div
-        className="rounded-[32px] overflow-hidden relative w-full"
-        style={{
-          background: 'rgba(16, 18, 27, 0.55)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 32px 80px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.07)',
-          backdropFilter: 'blur(40px)',
-        }}
-      >
-        {/* Soft top gradient line for depth */}
-        <div
-          className="absolute top-0 left-0 right-0 h-[1px] opacity-70"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.8), rgba(99, 102, 241, 0.8), transparent)' }}
-        />
+      <div className="login-card relative w-full overflow-hidden border border-white/10 bg-slate-950/55 shadow-[0_26px_90px_-28px_rgba(99,102,241,0.55),0_28px_80px_-26px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
+        <div className="absolute inset-x-10 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(139,92,246,0.7),rgba(96,165,250,0.55),transparent)]" />
+        <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-8 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
 
-        {/* Dynamic Inner Glow */}
-        <div 
-          className="absolute -top-32 -left-32 w-64 h-64 rounded-full pointer-events-none opacity-20"
-          style={{ background: 'radial-gradient(circle, rgba(124, 58, 237, 0.5) 0%, transparent 70%)', filter: 'blur(40px)' }}
-        />
-
-        <div className="px-8 py-10 sm:px-12 sm:py-14 relative z-10">
-
-          {/* Icon */}
-          <div className="flex justify-center mb-8">
-            <div
-              className="w-[72px] h-[72px] rounded-[24px] flex items-center justify-center relative group"
-              style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.12) 100%)',
-                border: '1px solid rgba(139,92,246,0.3)',
-                boxShadow: '0 8px 32px rgba(124, 58, 237, 0.15)',
-              }}
-            >
-              <div className="absolute inset-0 rounded-[24px] opacity-70 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.4)_0%,transparent_60%)] blur-md transition-opacity duration-500 group-hover:opacity-100" />
-              <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 64 64" fill="none" className="relative z-10 drop-shadow-[0_2px_8px_rgba(139,92,246,0.6)]">
+        <div className="login-card-inner relative z-10">
+          <div className="login-icon-row flex justify-center">
+            <div className="relative flex h-[86px] w-[86px] items-center justify-center rounded-full border border-violet-300/25 bg-indigo-500/10 shadow-[0_0_38px_rgba(124,58,237,0.22)]">
+              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.42)_0%,transparent_64%)] blur-md" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 64 64" fill="none" className="relative z-10 drop-shadow-[0_2px_10px_rgba(139,92,246,0.7)]" aria-hidden="true">
                 <defs>
-                  <linearGradient id="ll-icon" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#c4b5fd"/>
-                    <stop offset="100%" stopColor="#818cf8"/>
+                  <linearGradient id="ll-card-icon" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#c4b5fd" />
+                    <stop offset="100%" stopColor="#818cf8" />
                   </linearGradient>
                 </defs>
-                <circle cx="22" cy="32" r="13" stroke="url(#ll-icon)" strokeWidth="3" fill="none"/>
-                <circle cx="42" cy="32" r="13" stroke="url(#ll-icon)" strokeWidth="3" fill="none"/>
-                <circle cx="32" cy="32" r="5" fill="url(#ll-icon)"/>
+                <circle cx="22" cy="32" r="13" stroke="url(#ll-card-icon)" strokeWidth="3" fill="none" />
+                <circle cx="42" cy="32" r="13" stroke="url(#ll-card-icon)" strokeWidth="3" fill="none" />
+                <circle cx="32" cy="32" r="5" fill="url(#ll-card-icon)" />
               </svg>
             </div>
           </div>
 
-          {/* Headline */}
-          <div className="text-center mb-10">
-            <h2 className="text-[1.75rem] font-extrabold text-white tracking-tight mb-3">
+          <div className="login-heading text-center">
+            <h2 className="login-title text-white">
               Bem-vindo de volta
             </h2>
-            <p className="text-white/60 text-[1.05rem] font-medium">
+            <p className="mt-2 text-[1.02rem] font-medium text-white/60">
               Acesse sua conta para continuar
             </p>
           </div>
 
-          {/* Form */}
           <LoginForm />
-
         </div>
       </div>
-      
-      {/* Footer for mobile only, shown outside the card */}
-      <div className="lg:hidden mt-8 text-center">
-        <p className="text-white/30 text-[0.85rem] font-medium tracking-wide">
+
+      <div className="login-mobile-footer text-center lg:hidden">
+        <p className="text-[0.85rem] font-medium tracking-wide text-white/35">
           © {new Date().getFullYear()} LenteLink.<br />Todos os direitos reservados.
         </p>
       </div>
