@@ -4,6 +4,7 @@ import {
   AlertTriangle, ArrowUpRight, TrendingUp,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import Link from 'next/link';
 
 export const metadata = { title: 'Dashboard — Laboratório | LenteLink' };
@@ -168,93 +169,99 @@ export default async function LabDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Últimos pedidos pendentes */}
-        <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
+        <Card>
+          <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-3">
               <div
-                className="w-7 h-7 rounded-[var(--radius-md)] flex items-center justify-center"
+                className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center shadow-[0_4px_10px_rgba(245,158,11,0.2)]"
                 style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}
               >
-                <ClipboardList size={14} className="text-white" />
+                <ClipboardList size={16} className="text-white" />
               </div>
-              <h3 className="text-sm font-semibold text-[var(--color-text-base)]">
+              <h3 className="text-base font-bold text-[var(--color-text-base)]">
                 Pedidos aguardando confirmação
               </h3>
             </div>
-            <Link href="/lab/orders" className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>
+            <Link href="/lab/orders" className="text-sm font-semibold hover:opacity-80 transition-opacity" style={{ color: 'var(--color-primary)' }}>
               Ver todos
             </Link>
           </div>
 
-          {!pendingOrders?.length ? (
-            <div className="px-6 py-10 flex flex-col items-center justify-center text-center gap-2">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center mb-1"
-                style={{ background: 'var(--color-success-bg)' }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+          <CardContent className="p-0">
+            {!pendingOrders?.length ? (
+              <div className="px-6 py-10 flex flex-col items-center justify-center text-center gap-2">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-1 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+                  style={{ background: 'var(--color-success-bg)' }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success-text)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-[var(--color-text-base)]">Tudo em dia!</p>
+                <p className="text-[0.8125rem] text-[var(--color-text-muted)]">Nenhum pedido aguardando confirmação.</p>
               </div>
-              <p className="text-sm font-medium text-[var(--color-text-base)]">Tudo em dia!</p>
-              <p className="text-[0.8125rem] text-[var(--color-text-muted)]">Nenhum pedido aguardando confirmação.</p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-[var(--color-border)]">
-              {pendingOrders.map((order: any) => (
-                <li key={order.id} className="px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--color-bg-surface-2)] transition-colors">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--color-text-base)] truncate">
-                      {order.order_number}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">
-                      {(order.optical_stores as any)?.name ?? '—'}
-                    </p>
-                  </div>
-                  {statusBadge(order.status)}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            ) : (
+              <ul className="divide-y divide-[var(--color-border)]">
+                {pendingOrders.map((order: any) => (
+                  <li key={order.id} className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer" onClick={() => window.location.href = `/lab/orders`}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--color-text-base)] truncate">
+                        {order.order_number}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">
+                        {(order.optical_stores as any)?.name ?? '—'}
+                      </p>
+                    </div>
+                    {statusBadge(order.status)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Quick actions */}
-        <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div
-              className="w-7 h-7 rounded-[var(--radius-md)] flex items-center justify-center"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              <TrendingUp size={14} className="text-white" />
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center shadow-[var(--shadow-glow)]"
+                style={{ background: 'var(--gradient-primary)' }}
+              >
+                <TrendingUp size={16} className="text-white" />
+              </div>
+              <h3 className="text-base font-bold text-[var(--color-text-base)]">Ações rápidas</h3>
             </div>
-            <h3 className="text-sm font-semibold text-[var(--color-text-base)]">Ações rápidas</h3>
-          </div>
-          <div className="grid grid-cols-1 gap-2.5">
-            {[
-              { label: 'Cadastrar nova ótica', href: '/lab/optical-stores/new', icon: Store },
-              { label: 'Adicionar lente ao catálogo', href: '/lab/lens-types/new', icon: Glasses },
-              { label: 'Adicionar SKU ao estoque', href: '/lab/stock/new', icon: Package },
-              { label: 'Ver todos os pedidos', href: '/lab/orders', icon: ClipboardList },
-            ].map((action) => {
-              const Icon = action.icon;
-              return (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)]
-                             border border-[var(--color-border)] text-sm font-medium
-                             text-[var(--color-text-base)] transition-all duration-150
-                             hover:bg-[var(--color-bg-surface-2)] hover:border-[var(--color-primary-light)]
-                             hover:shadow-[var(--shadow-sm)]"
-                >
-                  <Icon size={15} className="text-[var(--color-primary)] flex-shrink-0" />
-                  <span className="flex-1 truncate">{action.label}</span>
-                  <ArrowUpRight size={13} className="text-[var(--color-text-muted)] flex-shrink-0" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="grid grid-cols-1 gap-3">
+              {[
+                { label: 'Cadastrar nova ótica', href: '/lab/optical-stores/new', icon: Store },
+                { label: 'Adicionar lente ao catálogo', href: '/lab/lens-types/new', icon: Glasses },
+                { label: 'Adicionar SKU ao estoque', href: '/lab/stock/new', icon: Package },
+                { label: 'Ver todos os pedidos', href: '/lab/orders', icon: ClipboardList },
+              ].map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-[var(--radius-lg)]
+                               border border-[var(--color-border)] text-[0.9375rem] font-medium
+                               text-[var(--color-text-base)] transition-all duration-200
+                               hover:bg-[var(--color-bg-surface-2)] hover:border-[var(--color-primary-light)]
+                               hover:shadow-[var(--shadow-sm)] hover:-translate-y-[1px]"
+                  >
+                    <Icon size={16} className="text-[var(--color-primary)] flex-shrink-0" />
+                    <span className="flex-1 truncate">{action.label}</span>
+                    <ArrowUpRight size={14} className="text-[var(--color-text-muted)] flex-shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

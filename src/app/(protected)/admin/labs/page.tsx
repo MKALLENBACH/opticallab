@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/Button';
-import { Plus } from 'lucide-react';
+import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
 import { LabsTable } from './LabsTable';
 import { EntityStatus } from '@/lib/types/enums';
@@ -42,9 +42,9 @@ export default async function AdminLabsPage() {
         </Link>
       </div>
 
-      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
+      <Card className="overflow-hidden">
         <LabsTable data={typedLabs} />
-      </div>
+      </Card>
     </div>
   );
 }

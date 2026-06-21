@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Activity, Beaker, Users, ClipboardList, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Link from 'next/link';
 
 export const metadata = { title: 'Dashboard — Admin Global | LenteLink' };
@@ -123,66 +124,74 @@ export default async function AdminDashboardPage() {
       {/* ── Info row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Status */}
-        <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#10b981,#059669)' }}
-            >
-              <Activity size={16} className="text-white" />
-            </div>
-            <h3 className="text-base font-semibold text-[var(--color-text-base)]">Status do Sistema</h3>
-          </div>
-          <div className="space-y-3">
-            {[
-              { label: 'Banco de dados', status: 'Operacional' },
-              { label: 'Autenticação', status: 'Operacional' },
-              { label: 'Storage', status: 'Operacional' },
-            ].map((s) => (
-              <div key={s.label} className="flex items-center justify-between py-2 border-b border-[var(--color-border)] last:border-0">
-                <span className="text-sm text-[var(--color-text-muted)]">{s.label}</span>
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-success)]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] inline-block" />
-                  {s.status}
-                </span>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg,#10b981,#059669)' }}
+              >
+                <Activity size={16} className="text-white" />
               </div>
-            ))}
-          </div>
-        </div>
+              <CardTitle>Status do Sistema</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="space-y-3">
+              {[
+                { label: 'Banco de dados', status: 'Operacional' },
+                { label: 'Autenticação', status: 'Operacional' },
+                { label: 'Storage', status: 'Operacional' },
+              ].map((s) => (
+                <div key={s.label} className="flex items-center justify-between py-2 border-b border-[var(--color-border)] last:border-0">
+                  <span className="text-sm text-[var(--color-text-muted)]">{s.label}</span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-success)]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] inline-block shadow-[0_0_8px_var(--color-success)]" />
+                    {s.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick actions */}
-        <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              <TrendingUp size={16} className="text-white" />
-            </div>
-            <h3 className="text-base font-semibold text-[var(--color-text-base)]">Ações rápidas</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Novo laboratório', href: '/admin/labs/new' },
-              { label: 'Novo usuário', href: '/admin/users/new' },
-              { label: 'Ver laboratórios', href: '/admin/labs' },
-              { label: 'Ver usuários', href: '/admin/users' },
-            ].map((action) => (
-              <Link
-                key={action.label}
-                href={action.href}
-                className="flex items-center justify-between px-4 py-3 rounded-[var(--radius-lg)]
-                           border border-[var(--color-border)] text-sm font-medium
-                           text-[var(--color-text-base)] transition-all duration-150
-                           hover:bg-[var(--color-bg-surface-2)] hover:border-[var(--color-border-hover)]
-                           hover:shadow-[var(--shadow-sm)]"
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center"
+                style={{ background: 'var(--gradient-primary)' }}
               >
-                {action.label}
-                <ArrowUpRight size={14} className="text-[var(--color-text-muted)]" />
-              </Link>
-            ))}
-          </div>
-        </div>
+                <TrendingUp size={16} className="text-white" />
+              </div>
+              <CardTitle>Ações rápidas</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Novo laboratório', href: '/admin/labs/new' },
+                { label: 'Novo usuário', href: '/admin/users/new' },
+                { label: 'Ver laboratórios', href: '/admin/labs' },
+                { label: 'Ver usuários', href: '/admin/users' },
+              ].map((action) => (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className="flex items-center justify-between px-4 py-3 rounded-[var(--radius-lg)]
+                             border border-[var(--color-border)] text-sm font-medium
+                             text-[var(--color-text-base)] transition-all duration-200
+                             hover:bg-[var(--color-bg-surface-2)] hover:border-[var(--color-border-hover)]
+                             hover:shadow-[var(--shadow-sm)] hover:-translate-y-[1px]"
+                >
+                  {action.label}
+                  <ArrowUpRight size={14} className="text-[var(--color-primary)]" />
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

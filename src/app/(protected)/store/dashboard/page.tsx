@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Package, Clock, CheckCircle, ArrowUpRight, ClipboardList } from 'lucide-react';
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 import { Badge } from '@/components/ui/Badge';
+import { Card, CardContent } from '@/components/ui/Card';
 import Link from 'next/link';
 
 export const metadata = { title: 'Painel da Ótica | LenteLink' };
@@ -132,34 +133,36 @@ export default async function StoreDashboardPage() {
       </div>
 
       {/* ── Recent orders ── */}
-      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <div
-              className="w-7 h-7 rounded-[var(--radius-md)] flex items-center justify-center"
+              className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center shadow-[var(--shadow-glow)]"
               style={{ background: 'var(--gradient-primary)' }}
             >
-              <ClipboardList size={14} className="text-white" />
+              <ClipboardList size={16} className="text-white" />
             </div>
-            <h3 className="text-sm font-semibold text-[var(--color-text-base)]">
+            <h3 className="text-base font-bold text-[var(--color-text-base)]">
               Últimos pedidos
             </h3>
           </div>
-          <Link href="/store/orders" className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>
+          <Link href="/store/orders" className="text-sm font-semibold hover:opacity-80 transition-opacity" style={{ color: 'var(--color-primary)' }}>
             Ver todos
           </Link>
         </div>
-        <ResponsiveDataTable
-          data={recentOrders || []}
-          keyExtractor={(row) => row.id}
-          columns={[
-            { header: 'Nº Pedido', accessor: 'order_number', className: 'font-semibold font-mono' },
-            { header: 'Status', accessor: (row) => formatStatus(row.status) },
-            { header: 'Data', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
-          ]}
-          emptyMessage="Você ainda não possui pedidos registrados."
-        />
-      </div>
+        <CardContent className="p-0">
+          <ResponsiveDataTable
+            data={recentOrders || []}
+            keyExtractor={(row) => row.id}
+            columns={[
+              { header: 'Nº Pedido', accessor: 'order_number', className: 'font-semibold font-mono' },
+              { header: 'Status', accessor: (row) => formatStatus(row.status) },
+              { header: 'Data', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
+            ]}
+            emptyMessage="Você ainda não possui pedidos registrados."
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

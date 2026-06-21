@@ -22,39 +22,45 @@ export function Button({
   const baseStyles = `
     inline-flex items-center justify-center gap-2
     font-semibold rounded-[var(--radius-md)]
-    transition-all duration-150 select-none
+    transition-all duration-200 select-none
     focus-visible:outline focus-visible:outline-2
     focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]
     active:scale-[0.97]
   `;
 
   const sizeStyles: Record<string, string> = {
-    xs: 'px-2.5 py-1.5 text-[0.75rem] leading-none',
+    xs: 'px-2.5 py-1.5 text-[0.75rem] leading-none rounded-[var(--radius-sm)]',
     sm: 'px-3.5 py-2 text-[0.8125rem]',
     md: 'px-4.5 py-2.5 text-[0.9375rem]',
-    lg: 'px-6 py-3.5 text-base',
+    lg: 'px-6 py-3.5 text-base h-12 rounded-[var(--radius-lg)]',
   };
 
   const variantStyles: Record<string, string> = {
     primary: `
-      bg-[var(--color-primary)] text-white
-      hover:bg-[var(--color-primary-hover)]
-      shadow-sm hover:shadow-[var(--shadow-glow)]
+      [background:var(--gradient-primary)] text-white
+      border-none
+      shadow-[var(--shadow-glow)]
+      hover:-translate-y-[1px]
+      hover:shadow-[0_6px_20px_rgba(99,102,241,0.4)]
     `,
     secondary: `
-      bg-[var(--color-secondary)] text-white
-      hover:bg-[var(--color-secondary-hover)]
-      shadow-sm
+      bg-[var(--color-bg-surface-2)] text-[var(--color-text-base)]
+      border border-[var(--color-border)]
+      shadow-[var(--shadow-sm)]
+      hover:bg-[var(--color-bg-surface-hover)]
+      hover:border-[var(--color-border-hover)]
     `,
     success: `
-      bg-[var(--color-success)] text-white
-      hover:opacity-90
-      shadow-sm
+      [background:var(--gradient-success)] text-white
+      border-none
+      shadow-[0_4px_15px_rgba(16,185,129,0.25)]
+      hover:-translate-y-[1px]
+      hover:shadow-[0_6px_20px_rgba(16,185,129,0.35)]
     `,
     outline: `
-      border-[1.5px] border-[var(--color-border)]
+      border border-[var(--color-border)]
       text-[var(--color-text-base)]
-      bg-[var(--color-bg-surface)]
+      bg-transparent
       hover:bg-[var(--color-bg-surface-2)]
       hover:border-[var(--color-border-hover)]
     `,
@@ -64,9 +70,11 @@ export function Button({
       hover:bg-[var(--color-bg-surface-2)]
     `,
     danger: `
-      bg-[var(--color-error)] text-white
-      hover:opacity-90
-      shadow-sm
+      [background:var(--gradient-danger)] text-white
+      border-none
+      shadow-[0_4px_15px_rgba(239,68,68,0.25)]
+      hover:-translate-y-[1px]
+      hover:shadow-[0_6px_20px_rgba(239,68,68,0.35)]
     `,
   };
 
@@ -78,7 +86,7 @@ export function Button({
         ${baseStyles}
         ${sizeStyles[size]}
         ${variantStyles[variant]}
-        ${isDisabled ? 'opacity-50 cursor-not-allowed active:scale-100' : ''}
+        ${isDisabled ? 'opacity-50 cursor-not-allowed active:scale-100 hover:transform-none hover:shadow-none' : ''}
         ${className}
       `}
       disabled={isDisabled}

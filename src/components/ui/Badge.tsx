@@ -17,11 +17,11 @@ export function Badge({
 }: BadgeProps) {
   const variantStyles: Record<string, string> = {
     default: 'bg-[var(--color-bg-surface-2)] text-[var(--color-text-muted)] border-[var(--color-border)]',
-    success: 'bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[var(--color-success)]/20',
-    warning: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning)]/20',
-    error:   'bg-[var(--color-error-bg)] text-[var(--color-error-text)] border-[var(--color-error)]/20',
-    info:    'bg-[var(--color-info-bg)] text-[var(--color-info-text)] border-[var(--color-info)]/20',
-    urgent:  'bg-[var(--color-urgent-bg)] text-[var(--color-urgent-text)] border-[var(--color-urgent)]/20',
+    success: 'bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[var(--color-success-border)] shadow-[0_0_10px_rgba(16,185,129,0.1)]',
+    warning: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-border)] shadow-[0_0_10px_rgba(245,158,11,0.1)]',
+    error:   'bg-[var(--color-error-bg)] text-[var(--color-error-text)] border-[var(--color-error-border)] shadow-[0_0_10px_rgba(239,68,68,0.1)]',
+    info:    'bg-[var(--color-info-bg)] text-[var(--color-info-text)] border-[var(--color-info-border)] shadow-[0_0_10px_rgba(59,130,246,0.1)]',
+    urgent:  'bg-[var(--color-urgent-bg)] text-[var(--color-urgent-text)] border-[var(--color-urgent-border)] shadow-[0_0_10px_rgba(225,29,72,0.1)]',
   };
 
   const dotColors: Record<string, string> = {

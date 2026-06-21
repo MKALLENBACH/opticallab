@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/Badge';
+import { Card } from '@/components/ui/Card';
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 
 export const metadata = { title: 'Pedidos | LenteLink' };
@@ -67,7 +68,7 @@ export default async function LabOrdersPage() {
         <p>Acompanhe todos os pedidos recebidos das óticas parceiras.</p>
       </div>
 
-      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
+      <Card className="overflow-hidden">
         <ResponsiveDataTable
           data={typedOrders}
           keyExtractor={(row) => row.id}
@@ -87,7 +88,7 @@ export default async function LabOrdersPage() {
           ]}
           emptyMessage="Nenhum pedido recebido ainda. Quando uma ótica fizer um pedido, ele aparecerá aqui."
         />
-      </div>
+      </Card>
     </div>
   );
 }

@@ -32,20 +32,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             ref={ref}
             className={`
-              w-full bg-[var(--color-bg-surface)]
-              border-[1.5px] rounded-[var(--radius-md)]
+              w-full bg-[rgba(0,0,0,0.2)]
+              border border-[var(--color-border)] rounded-[var(--radius-md)]
               px-3.5 py-2.5 text-[0.9375rem]
               text-[var(--color-text-base)]
               placeholder:text-[var(--color-text-subtle)]
-              transition-all duration-150
+              transition-all duration-200
               ${leftIcon ? 'pl-9' : ''}
               ${rightElement ? 'pr-10' : ''}
               ${error
-                ? 'border-[var(--color-error)] focus:border-[var(--color-error)] focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)]'
-                : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:shadow-[0_0_0_3px_var(--color-primary-light)]'
+                ? 'border-[var(--color-error)] focus:border-[var(--color-error)] focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)] bg-[rgba(239,68,68,0.05)]'
+                : 'focus:border-[var(--color-border-focus)] focus:shadow-[0_0_0_3px_var(--color-primary-light)] focus:bg-[rgba(0,0,0,0.35)] hover:border-[var(--color-border-hover)]'
               }
-              disabled:bg-[var(--color-bg-surface-2)] disabled:text-[var(--color-text-muted)]
-              disabled:cursor-not-allowed disabled:opacity-70
+              disabled:bg-[rgba(255,255,255,0.02)] disabled:text-[var(--color-text-muted)]
+              disabled:cursor-not-allowed disabled:opacity-60
             `}
             {...props}
           />

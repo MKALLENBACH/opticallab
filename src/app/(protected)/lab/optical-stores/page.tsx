@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/Button';
-import { Plus } from 'lucide-react';
+import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
 import { OpticalStoresTable } from './OpticalStoresTable';
 import { EntityStatus } from '@/lib/types/enums';
@@ -59,9 +59,9 @@ export default async function LabOpticalStoresPage() {
         </Link>
       </div>
 
-      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
+      <Card className="overflow-hidden">
         <OpticalStoresTable data={typedStores} />
-      </div>
+      </Card>
     </div>
   );
 }

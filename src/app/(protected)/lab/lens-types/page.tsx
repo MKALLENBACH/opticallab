@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
 import { LensTypesTable } from './LensTypesTable';
 import { EntityStatus, LensCategory, LensMaterial } from '@/lib/types/enums';
@@ -64,10 +65,9 @@ export default async function LabLensTypesPage() {
         </Link>
       </div>
 
-      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
+      <Card className="overflow-hidden">
         <LensTypesTable data={typedLenses} />
-      </div>
+      </Card>
     </div>
   );
 }
-

@@ -14,8 +14,8 @@ export function Card({ children, className = '', hover = false, ...props }: Card
         rounded-[var(--radius-xl)]
         shadow-[var(--shadow-card)]
         overflow-hidden
-        transition-all duration-200
-        ${hover ? 'hover:shadow-[var(--shadow-lg)] hover:-translate-y-px hover:border-[var(--color-border-hover)] cursor-pointer' : ''}
+        transition-all duration-300
+        ${hover ? 'hover:shadow-[var(--shadow-xl)] hover:-translate-y-[2px] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-surface-hover)] cursor-pointer' : ''}
         ${className}
       `}
       {...props}
@@ -28,7 +28,7 @@ export function Card({ children, className = '', hover = false, ...props }: Card
 export function CardHeader({ children, className = '', ...props }: CardProps) {
   return (
     <div
-      className={`px-6 py-4 border-b border-[var(--color-border)] ${className}`}
+      className={`px-6 py-5 border-b border-[var(--color-border)] ${className}`}
       {...props}
     >
       {children}
@@ -39,7 +39,7 @@ export function CardHeader({ children, className = '', ...props }: CardProps) {
 export function CardTitle({ children, className = '', ...props }: CardProps) {
   return (
     <h3
-      className={`text-base font-semibold tracking-tight text-[var(--color-text-base)] ${className}`}
+      className={`text-lg font-bold tracking-tight text-[var(--color-text-base)] ${className}`}
       {...props}
     >
       {children}
@@ -50,7 +50,7 @@ export function CardTitle({ children, className = '', ...props }: CardProps) {
 export function CardDescription({ children, className = '', ...props }: CardProps) {
   return (
     <p
-      className={`text-sm text-[var(--color-text-muted)] mt-1 ${className}`}
+      className={`text-[0.9375rem] text-[var(--color-text-muted)] mt-1.5 ${className}`}
       {...props}
     >
       {children}
@@ -76,3 +76,4 @@ export function CardFooter({ children, className = '', ...props }: CardProps) {
     </div>
   );
 }
+
