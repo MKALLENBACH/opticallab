@@ -47,8 +47,8 @@ export default async function LabOrdersPage() {
     switch (status) {
       case 'aguardando_confirmacao': return <Badge variant="warning">Aguardando Confirmação</Badge>;
       case 'confirmado': return <Badge variant="info">Confirmado</Badge>;
-      case 'em_producao': return <Badge variant="primary">Em Produção</Badge>;
-      case 'em_entrega': return <Badge variant="secondary">Em Entrega</Badge>;
+      case 'em_producao': return <Badge variant="info">Em Produção</Badge>;
+      case 'em_entrega': return <Badge variant="default">Em Entrega</Badge>;
       case 'finalizado': return <Badge variant="success">Finalizado</Badge>;
       case 'cancelado': return <Badge variant="error">Cancelado</Badge>;
       default: return <Badge>{status}</Badge>;

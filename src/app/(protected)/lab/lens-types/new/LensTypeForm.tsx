@@ -5,7 +5,7 @@ import { createLensTypeAction } from '@/actions/lens-types';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { LensCategory, LensMaterial, RefractiveIndex } from '@/lib/types/enums';
+import { LensCategory, LensMaterial, RefractiveIndex, EntityStatus } from '@/lib/types/enums';
 
 // Usaremos a constante que já foi solicitada (assumindo que existe ou será criada em constants, vamos criar localmente para o form)
 const TREATMENTS = [
@@ -48,6 +48,7 @@ export function LensTypeForm() {
       default_delivery_time_in_stock_days: parseInt(formData.get('default_delivery_time_in_stock_days') as string) || undefined,
       default_production_time_out_of_stock_days: parseInt(formData.get('default_production_time_out_of_stock_days') as string) || undefined,
       description: formData.get('description') as string || undefined,
+      status: EntityStatus.ACTIVE,
     };
 
     const result = await createLensTypeAction(data);
@@ -142,12 +143,12 @@ export function LensTypeForm() {
                   className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-md px-3 py-2 text-base focus:border-[var(--color-primary)] outline-none"
                 >
                   <option value="">Selecione...</option>
-                  <option value={RefractiveIndex.INDEX_1_49}>1.49</option>
-                  <option value={RefractiveIndex.INDEX_1_56}>1.56</option>
-                  <option value={RefractiveIndex.INDEX_1_59}>1.59</option>
-                  <option value={RefractiveIndex.INDEX_1_60}>1.60</option>
-                  <option value={RefractiveIndex.INDEX_1_67}>1.67</option>
-                  <option value={RefractiveIndex.INDEX_1_74}>1.74</option>
+                  <option value={RefractiveIndex.R_1_49}>1.49</option>
+                  <option value={RefractiveIndex.R_1_56}>1.56</option>
+                  <option value={RefractiveIndex.R_1_59}>1.59</option>
+                  <option value={RefractiveIndex.R_1_60}>1.60</option>
+                  <option value={RefractiveIndex.R_1_67}>1.67</option>
+                  <option value={RefractiveIndex.R_1_74}>1.74</option>
                   <option value={RefractiveIndex.OUTRO}>Outro</option>
                 </select>
               </div>

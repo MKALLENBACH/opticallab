@@ -5,7 +5,7 @@ import { createLensVariantAction } from '@/actions/lens-variants';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { LensSide } from '@/lib/types/enums';
+import { LensSide, EntityStatus } from '@/lib/types/enums';
 
 interface LensTypeOption {
   id: string;
@@ -42,6 +42,7 @@ export function LensVariantForm({ lensTypes }: { lensTypes: LensTypeOption[] }) 
       minimum_stock: parseInt(formData.get('minimum_stock') as string) || undefined,
       location: formData.get('location') as string || undefined,
       barcode: formData.get('barcode') as string || undefined,
+      status: EntityStatus.ACTIVE,
     };
 
     const result = await createLensVariantAction(data);

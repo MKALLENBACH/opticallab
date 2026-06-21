@@ -5,6 +5,7 @@ import { createLabAction } from '@/actions/labs';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { EntityStatus } from '@/lib/types/enums';
 
 export function LabForm() {
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export function LabForm() {
       slug: formData.get('slug') as string,
       email: formData.get('email') as string || undefined,
       phone: formData.get('phone') as string || undefined,
+      status: EntityStatus.ACTIVE,
     };
 
     const result = await createLabAction(data);

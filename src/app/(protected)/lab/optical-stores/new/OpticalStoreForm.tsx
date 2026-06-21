@@ -5,6 +5,7 @@ import { createOpticalStoreAction } from '@/actions/optical-stores';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { EntityStatus } from '@/lib/types/enums';
 
 export function OpticalStoreForm() {
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +27,7 @@ export function OpticalStoreForm() {
       city: formData.get('city') as string || undefined,
       state: formData.get('state') as string || undefined,
       zip_code: formData.get('zip_code') as string || undefined,
+      status: EntityStatus.ACTIVE,
     };
 
     const result = await createOpticalStoreAction(data);
