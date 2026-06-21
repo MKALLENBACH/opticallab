@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <radialGradient id="g3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="60%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </radialGradient>
+  </defs>
+  <!-- Left ring -->
+  <circle cx="22" cy="30" r="16" stroke="url(#g1)" stroke-width="3.5" fill="none"/>
+  <!-- Right ring -->
+  <circle cx="42" cy="30" r="16" stroke="url(#g2)" stroke-width="3.5" fill="none"/>
+  <!-- Center sphere -->
+  <circle cx="32" cy="30" r="6" fill="url(#g3)"/>
+  <!-- Dots between rings -->
+  <circle cx="27" cy="30" r="1" fill="#818cf8" opacity="0.6"/>
+  <circle cx="37" cy="30" r="1" fill="#818cf8" opacity="0.6"/>
+  <!-- Text -->
+  <text x="66" y="36" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="24" fill="white" letter-spacing="-0.03em">
+    Lente<tspan fill="#818cf8">Link</tspan>
+  </text>
+</svg>

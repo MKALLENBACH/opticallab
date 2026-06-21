@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Activity, Beaker, Users, ClipboardList, TrendingUp, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 
-export const metadata = { title: 'Dashboard — Admin Global | OpticaLab' };
+export const metadata = { title: 'Dashboard — Admin Global | LenteLink' };
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();

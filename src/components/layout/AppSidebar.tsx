@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { UserRole } from '@/lib/types/enums';
+import { Logo } from '@/components/ui/Logo';
 
 export interface NavItem {
   name: string;
@@ -92,21 +93,11 @@ export function AppSidebar({ role, labLogoUrl, labName, onNavClick }: AppSidebar
         {labLogoUrl ? (
           <img src={labLogoUrl} alt="Logo" className="h-8 max-w-[160px] object-contain" />
         ) : (
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              <Glasses size={16} className="text-white" />
-            </div>
-            <div>
-              <span className="text-white font-bold text-[0.9375rem] tracking-tight">
-                OpticaLab
-              </span>
-              <p className="text-[0.65rem] font-medium leading-none mt-0.5" style={{ color: 'var(--sidebar-text)' }}>
-                {labName || roleLabel[role] || 'Sistema'}
-              </p>
-            </div>
+          <div>
+            <Logo variant="full" size="sm" light />
+            <p className="text-[0.65rem] font-medium leading-none mt-1 ml-[34px]" style={{ color: 'var(--sidebar-text)' }}>
+              {labName || roleLabel[role] || 'Sistema'}
+            </p>
           </div>
         )}
       </div>

@@ -1,3 +1,5 @@
+import { Logo } from '@/components/ui/Logo';
+
 export default function AuthLayout({
   children,
 }: {
@@ -23,17 +25,7 @@ export default function AuthLayout({
         {/* Content */}
         <div className="relative z-10 flex flex-col h-full justify-between p-12">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-[10px] flex items-center justify-center"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="6" cy="12" r="4"/><circle cx="18" cy="12" r="4"/><path d="M2 12h4m12 0h4M6 8c0-2 1-4 3-5m2 1c1 .5 2 1.5 3 2"/>
-              </svg>
-            </div>
-            <span className="text-white font-bold text-xl tracking-tight">OpticaLab</span>
-          </div>
+          <Logo variant="full" size="lg" light />
 
           {/* Headline */}
           <div>
@@ -70,7 +62,7 @@ export default function AuthLayout({
           </div>
 
           <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.75rem' }}>
-            © {new Date().getFullYear()} OpticaLab. Todos os direitos reservados.
+            © {new Date().getFullYear()} LenteLink. Todos os direitos reservados.
           </p>
         </div>
       </div>

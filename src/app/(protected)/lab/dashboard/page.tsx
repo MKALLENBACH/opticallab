@@ -6,7 +6,7 @@ import {
 import { Badge } from '@/components/ui/Badge';
 import Link from 'next/link';
 
-export const metadata = { title: 'Dashboard — Laboratório | OpticaLab' };
+export const metadata = { title: 'Dashboard — Laboratório | LenteLink' };
 
 export default async function LabDashboardPage() {
   const supabase = await createClient();
