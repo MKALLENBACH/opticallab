@@ -8,22 +8,31 @@ interface AppShellProps {
 
 export function AppShell({ sidebar, topbar, children }: AppShellProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--color-bg-base)]">
-      {/* Sidebar - Desktop */}
-      <div className="hidden md:flex md:w-64 md:flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-surface)]">
-        {sidebar}
-      </div>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--color-bg-base)' }}>
 
-      {/* Main Content Wrapper */}
+      {/* ── Sidebar (Desktop) ── */}
+      <aside className="hidden md:flex md:flex-col w-60 lg:w-64 flex-shrink-0">
+        {sidebar}
+      </aside>
+
+      {/* ── Main Column ── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* Topbar */}
-        <header className="h-16 flex-shrink-0 flex items-center bg-[var(--color-bg-surface)] border-b border-[var(--color-border)] px-4 sm:px-6 lg:px-8 z-10 shadow-sm">
+
+        {/* ── Topbar ── */}
+        <header
+          className="h-14 flex-shrink-0 flex items-center z-10"
+          style={{
+            background: 'var(--color-bg-surface)',
+            borderBottom: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-xs)',
+          }}
+        >
           {topbar}
         </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 animate-fade-in relative">
-          <div className="mx-auto max-w-7xl">
+        {/* ── Scrollable Content ── */}
+        <main className="flex-1 overflow-y-auto animate-fade-in">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             {children}
           </div>
         </main>

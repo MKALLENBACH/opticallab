@@ -69,6 +69,7 @@ export default async function ProtectedLayout({
       <ClientLayoutWrapper
         role={profile.role as UserRole}
         userName={profile.full_name}
+        userEmail={profile.email}
         labName={environmentName}
         labLogoUrl={labLogoUrl}
       >

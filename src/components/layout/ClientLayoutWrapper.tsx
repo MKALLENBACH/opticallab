@@ -6,11 +6,13 @@ import { AppSidebar } from './AppSidebar';
 import { AppTopbar } from './AppTopbar';
 import { UserRole } from '@/lib/types/enums';
 import { X } from 'lucide-react';
+import { Glasses } from 'lucide-react';
 
 interface ClientLayoutWrapperProps {
   children: React.ReactNode;
   role: UserRole;
   userName: string;
+  userEmail?: string;
   labName?: string;
   labLogoUrl?: string | null;
 }
@@ -19,6 +21,7 @@ export function ClientLayoutWrapper({
   children,
   role,
   userName,
+  userEmail,
   labName,
   labLogoUrl,
 }: ClientLayoutWrapperProps) {
@@ -27,11 +30,17 @@ export function ClientLayoutWrapper({
   return (
     <>
       <AppShell
-        sidebar={<AppSidebar role={role} labLogoUrl={labLogoUrl} />}
+        sidebar={
+          <AppSidebar
+            role={role}
+            labLogoUrl={labLogoUrl}
+            labName={labName}
+          />
+        }
         topbar={
           <AppTopbar
-            title="OpticaLab"
             userName={userName}
+            userEmail={userEmail}
             labName={labName}
             onMenuClick={() => setIsMobileMenuOpen(true)}
           />
@@ -40,29 +49,39 @@ export function ClientLayoutWrapper({
         {children}
       </AppShell>
 
-      {/* Mobile Drawer Overlay */}
+      {/* ── Mobile Sidebar Drawer ── */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
+          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/50 transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={() => setIsMobileMenuOpen(false)}
-            aria-hidden="true"
           />
-          <div className="relative flex w-full max-w-xs flex-1 flex-col bg-[var(--color-bg-surface)] shadow-xl animate-fade-in">
-            <div className="absolute right-0 top-0 -mr-12 pt-2">
-              <button
-                type="button"
-                className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <span className="sr-only">Close sidebar</span>
-                <X className="h-6 w-6 text-white" aria-hidden="true" />
-              </button>
-            </div>
-            
-            {/* Re-use Sidebar for Mobile (needs to handle click to close on nav, but for now this works) */}
-            <div className="flex-1 h-0 overflow-y-auto" onClick={() => setIsMobileMenuOpen(false)}>
-              <AppSidebar role={role} labLogoUrl={labLogoUrl} />
+
+          {/* Drawer panel */}
+          <div
+            className="relative flex w-72 max-w-[85vw] flex-col shadow-2xl animate-slide-left"
+            style={{ background: 'var(--sidebar-bg)' }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute top-4 right-4 z-10 p-1.5 rounded-full
+                         text-white/50 hover:text-white hover:bg-white/10
+                         transition-colors"
+              aria-label="Fechar menu"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Sidebar reused */}
+            <div className="flex-1 overflow-y-auto">
+              <AppSidebar
+                role={role}
+                labLogoUrl={labLogoUrl}
+                labName={labName}
+                onNavClick={() => setIsMobileMenuOpen(false)}
+              />
             </div>
           </div>
         </div>

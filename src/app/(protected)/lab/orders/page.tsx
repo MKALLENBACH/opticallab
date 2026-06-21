@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 
@@ -56,36 +55,33 @@ export default async function LabOrdersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-[var(--color-text-base)]">Gerenciamento de Pedidos</h2>
-          <p className="text-[var(--color-text-muted)]">Acompanhe todos os pedidos recebidos das óticas parceiras.</p>
-        </div>
+    <div className="space-y-6 animate-slide-up">
+      <div className="page-header">
+        <h2>Gerenciamento de Pedidos</h2>
+        <p>Acompanhe todos os pedidos recebidos das óticas parceiras.</p>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <ResponsiveDataTable
-            data={typedOrders}
-            keyExtractor={(row) => row.id}
-            columns={[
-              { header: 'Nº Pedido', accessor: 'order_number', className: 'font-medium font-mono' },
-              { header: 'Ótica', accessor: (row) => row.optical_store?.name || '-' },
-              { 
-                header: 'Prioridade', 
-                accessor: (row) => (
-                  <Badge variant={row.priority === 'urgente' ? 'urgent' : 'default'}>
-                    {row.priority === 'urgente' ? 'Urgente' : 'Normal'}
-                  </Badge>
-                ) 
-              },
-              { header: 'Status', accessor: (row) => formatStatus(row.status) },
-              { header: 'Data', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR') },
-            ]}
-          />
-        </CardContent>
-      </Card>
+      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
+        <ResponsiveDataTable
+          data={typedOrders}
+          keyExtractor={(row) => row.id}
+          columns={[
+            { header: 'Nº Pedido', accessor: 'order_number', className: 'font-semibold font-mono' },
+            { header: 'Ótica', accessor: (row) => row.optical_store?.name || '—' },
+            {
+              header: 'Prioridade',
+              accessor: (row) => (
+                <Badge variant={row.priority === 'urgente' ? 'urgent' : 'default'} dot>
+                  {row.priority === 'urgente' ? 'Urgente' : 'Normal'}
+                </Badge>
+              )
+            },
+            { header: 'Status', accessor: (row) => formatStatus(row.status) },
+            { header: 'Data', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
+          ]}
+          emptyMessage="Nenhum pedido recebido ainda. Quando uma ótica fizer um pedido, ele aparecerá aqui."
+        />
+      </div>
     </div>
   );
 }
