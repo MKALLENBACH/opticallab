@@ -44,5 +44,5 @@ export async function createLensVariantAction(data: LensVariantInput) {
   }
 
   revalidatePath('/lab/stock');
-  redirect(`/lab/stock/${insertedVariant.id}`);
+  redirect('/lab/stock');
 }

@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/Button';
-import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { StockTable } from './StockTable';
+
+export const metadata = { title: 'Estoque (SKUs) | LenteLink' };
 
 export default async function LabStockPage() {
   const supabase = await createClient();
@@ -19,18 +20,21 @@ export default async function LabStockPage() {
   const labId = profile?.lab_id;
 
   if (!labId) {
-    return <div>Erro: Laboratório não encontrado.</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-[var(--color-text-muted)]">Laboratório não encontrado.</p>
+      </div>
+    );
   }
 
-  // Busca variantes associadas ao laboratório (limita a 200 no MVP se for muito grande)
   const { data: variants, error } = await supabase
     .from('lens_variants')
     .select(`
-      id, 
-      sku, 
-      sphere_esf, 
-      cylinder_cil, 
-      addition_add, 
+      id,
+      sku,
+      sphere_esf,
+      cylinder_cil,
+      addition_add,
       quantity_available,
       lens_type:lens_types(name)
     `)
@@ -48,21 +52,28 @@ export default async function LabStockPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-slide-up">
+      <div className="page-header flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-[var(--color-text-base)]">Controle de Estoque (SKUs)</h2>
-          <p className="text-[var(--color-text-muted)]">Gerencie as variantes físicas (com grau) das lentes do seu catálogo.</p>
+          <h2>Estoque (SKUs)</h2>
+          <p>Gerencie as variantes físicas com grau das lentes do seu catálogo.</p>
         </div>
         <Link href="/lab/stock/new">
-          <Button variant="primary">
-            <Plus size={18} className="mr-2" />
+          <Button
+            variant="primary"
+            leftIcon={
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            }
+          >
             Nova Variante
           </Button>
         </Link>
       </div>
 
-      <StockTable data={typedVariants} />
+      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
+        <StockTable data={typedVariants} />
+      </div>
     </div>
   );
 }
+

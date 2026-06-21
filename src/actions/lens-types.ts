@@ -41,5 +41,5 @@ export async function createLensTypeAction(data: LensTypeInput) {
   }
 
   revalidatePath('/lab/lens-types');
-  redirect(`/lab/lens-types/${insertedLens.id}`);
+  redirect('/lab/lens-types');
 }

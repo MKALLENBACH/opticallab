@@ -41,5 +41,5 @@ export async function createOpticalStoreAction(data: OpticalStoreInput) {
   }
 
   revalidatePath('/lab/optical-stores');
-  redirect(`/lab/optical-stores/${insertedStore.id}`);
+  redirect('/lab/optical-stores');
 }

@@ -33,15 +33,15 @@ export const ROLE_HOME_PATH: Record<UserRole, string> = {
   [UserRole.PLATFORM_ADMIN]: '/admin/dashboard',
   [UserRole.LAB_ADMIN]: '/lab/dashboard',
   [UserRole.LAB_USER]: '/lab/dashboard',
-  [UserRole.OPTICAL_ADMIN]: '/optical/dashboard',
-  [UserRole.OPTICAL_USER]: '/optical/dashboard',
+  [UserRole.OPTICAL_ADMIN]: '/store/dashboard',
+  [UserRole.OPTICAL_USER]: '/store/dashboard',
 };
 
 /** Roles permitidas por seção de rota */
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/admin': [UserRole.PLATFORM_ADMIN],
   '/lab': [UserRole.LAB_ADMIN, UserRole.LAB_USER],
-  '/optical': [UserRole.OPTICAL_ADMIN, UserRole.OPTICAL_USER],
+  '/store': [UserRole.OPTICAL_ADMIN, UserRole.OPTICAL_USER],
 };
 
 export function isLabRole(role: UserRole): boolean {

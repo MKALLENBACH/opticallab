@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/Badge';
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 
+export const metadata = { title: 'Pedidos | LenteLink' };
+
 export default async function LabOrdersPage() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
@@ -17,7 +19,11 @@ export default async function LabOrdersPage() {
   const labId = profile?.lab_id;
 
   if (!labId) {
-    return <div>Erro: Laboratório não encontrado.</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-[var(--color-text-muted)]">Laboratório não encontrado.</p>
+      </div>
+    );
   }
 
   const { data: orders, error } = await supabase
@@ -44,12 +50,12 @@ export default async function LabOrdersPage() {
 
   const formatStatus = (status: string) => {
     switch (status) {
-      case 'aguardando_confirmacao': return <Badge variant="warning">Aguardando Confirmação</Badge>;
-      case 'confirmado': return <Badge variant="info">Confirmado</Badge>;
-      case 'em_producao': return <Badge variant="info">Em Produção</Badge>;
-      case 'em_entrega': return <Badge variant="default">Em Entrega</Badge>;
-      case 'finalizado': return <Badge variant="success">Finalizado</Badge>;
-      case 'cancelado': return <Badge variant="error">Cancelado</Badge>;
+      case 'aguardando_confirmacao': return <Badge variant="warning" dot>Aguardando Confirmação</Badge>;
+      case 'confirmado': return <Badge variant="info" dot>Confirmado</Badge>;
+      case 'em_producao': return <Badge variant="info" dot>Em Produção</Badge>;
+      case 'em_entrega': return <Badge variant="default" dot>Em Entrega</Badge>;
+      case 'finalizado': return <Badge variant="success" dot>Finalizado</Badge>;
+      case 'cancelado': return <Badge variant="error" dot>Cancelado</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };

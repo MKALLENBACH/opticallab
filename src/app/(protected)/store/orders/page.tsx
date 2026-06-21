@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
+
+export const metadata = { title: 'Meus Pedidos | LenteLink' };
 
 export default async function StoreOrdersPage() {
   const supabase = await createClient();
@@ -18,7 +19,11 @@ export default async function StoreOrdersPage() {
   const storeId = profile?.optical_store_id;
 
   if (!storeId) {
-    return <div>Erro: Ótica não encontrada.</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-[var(--color-text-muted)]">Ótica não encontrada.</p>
+      </div>
+    );
   }
 
   const { data: orders, error } = await supabase
@@ -40,47 +45,44 @@ export default async function StoreOrdersPage() {
 
   const formatStatus = (status: string) => {
     switch (status) {
-      case 'aguardando_confirmacao': return <Badge variant="warning">Aguardando Confirmação</Badge>;
-      case 'confirmado': return <Badge variant="info">Confirmado pelo Lab</Badge>;
-      case 'em_producao': return <Badge variant="info">Em Produção</Badge>;
-      case 'em_entrega': return <Badge variant="default">Em Entrega</Badge>;
-      case 'finalizado': return <Badge variant="success">Finalizado</Badge>;
-      case 'cancelado': return <Badge variant="error">Cancelado</Badge>;
+      case 'aguardando_confirmacao': return <Badge variant="warning" dot>Aguardando Confirmação</Badge>;
+      case 'confirmado': return <Badge variant="info" dot>Confirmado pelo Lab</Badge>;
+      case 'em_producao': return <Badge variant="info" dot>Em Produção</Badge>;
+      case 'em_entrega': return <Badge variant="default" dot>Em Entrega</Badge>;
+      case 'finalizado': return <Badge variant="success" dot>Finalizado</Badge>;
+      case 'cancelado': return <Badge variant="error" dot>Cancelado</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-[var(--color-text-base)]">Meus Pedidos</h2>
-          <p className="text-[var(--color-text-muted)]">Histórico de todos os seus pedidos de lentes para o laboratório.</p>
-        </div>
+    <div className="space-y-6 animate-slide-up">
+      <div className="page-header">
+        <h2>Meus Pedidos</h2>
+        <p>Histórico de todos os seus pedidos de lentes para o laboratório.</p>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <ResponsiveDataTable
-            data={orders || []}
-            keyExtractor={(row) => row.id}
-            columns={[
-              { header: 'Nº Pedido', accessor: 'order_number', className: 'font-medium font-mono' },
-              { 
-                header: 'Prioridade', 
-                accessor: (row) => (
-                  <Badge variant={row.priority === 'urgente' ? 'urgent' : 'default'}>
-                    {row.priority === 'urgente' ? 'Urgente' : 'Normal'}
-                  </Badge>
-                ) 
-              },
-              { header: 'Status', accessor: (row) => formatStatus(row.status) },
-              { header: 'Data do Pedido', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR') },
-            ]}
-            emptyMessage="Você não fez nenhum pedido ainda."
-          />
-        </CardContent>
-      </Card>
+      <div className="bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)] border border-[var(--color-border)] overflow-hidden shadow-[var(--shadow-card)]">
+        <ResponsiveDataTable
+          data={orders || []}
+          keyExtractor={(row) => row.id}
+          columns={[
+            { header: 'Nº Pedido', accessor: 'order_number', className: 'font-semibold font-mono' },
+            {
+              header: 'Prioridade',
+              accessor: (row) => (
+                <Badge variant={row.priority === 'urgente' ? 'urgent' : 'default'} dot>
+                  {row.priority === 'urgente' ? 'Urgente' : 'Normal'}
+                </Badge>
+              )
+            },
+            { header: 'Status', accessor: (row) => formatStatus(row.status) },
+            { header: 'Data do Pedido', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
+          ]}
+          emptyMessage="Você não fez nenhum pedido ainda. Use 'Buscar Lentes' para criar seu primeiro pedido."
+        />
+      </div>
     </div>
   );
 }
+
