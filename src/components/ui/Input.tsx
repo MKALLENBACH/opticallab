@@ -32,17 +32,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             ref={ref}
             className={`
-              w-full bg-[rgba(15,17,26,0.5)]
-              border border-white/10 rounded-[14px]
+              w-full bg-[rgba(15,17,26,0.75)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
+              border border-white/10 rounded-[18px]
               py-[14px] text-[0.95rem] font-medium
               text-white
-              placeholder:text-white/30
+              placeholder:text-white/40
               transition-all duration-300
-              ${leftIcon ? 'pl-12' : 'pl-4'}
-              ${rightElement ? 'pr-12' : 'pr-4'}
+              ${leftIcon ? 'pl-14' : 'pl-4'}
+              ${rightElement ? 'pr-14' : 'pr-4'}
               ${error
-                ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.1)] bg-[rgba(239,68,68,0.05)]'
-                : 'focus:border-indigo-400 focus:shadow-[0_0_24px_rgba(129,140,248,0.15),inset_0_0_0_1px_rgba(129,140,248,0.4)] focus:bg-[rgba(20,22,35,0.7)] hover:border-white/25 hover:bg-[rgba(20,22,35,0.6)]'
+                ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.15)] bg-[rgba(239,68,68,0.08)]'
+                : 'focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:shadow-[0_0_22px_rgba(129,140,248,0.16),inset_0_0_0_1px_rgba(129,140,248,0.35)] focus:bg-[rgba(20,22,35,0.75)] hover:border-white/25 hover:bg-[rgba(20,22,35,0.7)]'
               }
               disabled:bg-white/5 disabled:text-white/50
               disabled:cursor-not-allowed disabled:opacity-60

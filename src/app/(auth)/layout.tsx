@@ -18,16 +18,14 @@ export default function AuthLayout({
           priority 
         />
         {/* Soft overlay to guarantee contrast and blending */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(5,6,10,0.7)_100%)]" />
-        
-        {/* Gradients to fade out the image on the right for the card and ensure legibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[rgba(5,6,10,0.4)] via-[rgba(5,6,10,0.3)] to-[#05060A] lg:to-[#05060A]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#05060A] via-transparent to-[rgba(5,6,10,0.2)] lg:to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_0%,rgba(5,6,10,0.92)_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/95" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/80 lg:to-transparent" />
       </div>
 
       {/* ─── Left Panel: Content ─── */}
       {/* Hidden on mobile completely? No, user said "Priorizar o card de login. Reduzir ou ocultar elementos decorativos se necessário." Let's keep it hidden on mobile and let the card take over, or show a simplified logo. The logo is inside the card container on mobile. So hiding left panel on mobile is perfect. */}
-      <div className="hidden lg:flex lg:flex-col lg:w-[50%] xl:w-[55%] flex-shrink-0 relative z-10 px-12 xl:px-[72px] py-14 justify-between">
+      <div className="hidden lg:flex lg:flex-col lg:w-[50%] xl:w-[55%] flex-shrink-0 relative z-10 px-16 xl:px-[80px] py-16 justify-between">
         
         {/* Logo top-left */}
         <div className="flex items-center gap-3">
@@ -49,10 +47,10 @@ export default function AuthLayout({
         </div>
 
         {/* Text Content */}
-        <div className="w-full max-w-[560px] mt-auto mb-[12vh] flex flex-col">
+        <div className="w-full max-w-[520px] mt-auto mb-[10vh] flex flex-col gap-10">
           <h1 
-            className="text-white font-extrabold leading-[1.1] mb-6 tracking-tight drop-shadow-lg"
-            style={{ fontSize: 'clamp(2.5rem, 4.5vw, 4rem)' }}
+            className="text-white font-extrabold leading-[1.05] max-w-[28rem] mb-6 tracking-tight drop-shadow-lg"
+            style={{ fontSize: 'clamp(2.5rem, 4.2vw, 3.8rem)' }}
           >
             Gestão óptica<br />
             <span style={{
@@ -63,11 +61,11 @@ export default function AuthLayout({
               de alto nível
             </span>
           </h1>
-          <p className="text-white/70 text-[1.1rem] leading-relaxed mb-12 max-w-[480px] font-medium">
+          <p className="text-white/70 text-[1.05rem] leading-8 mb-12 max-w-xl font-medium">
             Plataforma para laboratórios ópticos gerenciarem óticas, estoque e pedidos em tempo real.
           </p>
 
-          <ul className="flex flex-col gap-7">
+          <ul className="flex flex-col gap-6">
             {[
               { text: 'Pedidos em tempo real entre óticas e laboratórios', icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5' },
               { text: 'Controle de estoque com busca avançada por grau', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
@@ -75,8 +73,8 @@ export default function AuthLayout({
             ].map((feat, i) => (
               <li key={i} className="flex items-center gap-4 group">
                 <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.25)] relative"
-                  style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}
+                  className="w-14 h-14 rounded-3xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_24px_rgba(99,102,241,0.24)] relative"
+                  style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(255,255,255,0.08)' }}
                 >
                   <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity" />
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="relative z-10">
