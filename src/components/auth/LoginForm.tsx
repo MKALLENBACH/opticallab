@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { loginAction } from '@/actions/auth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -44,30 +44,30 @@ export function LoginForm() {
           --color-primary-light: rgba(129,140,248,0.2);
         }
         .auth-btn-gradient {
-          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-          border: none !important;
-          box-shadow: 0 8px 24px -6px rgba(99, 102, 241, 0.5) !important;
-          transition: all 0.3s ease !important;
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+          border: 1px solid rgba(139, 92, 246, 0.3) !important;
+          box-shadow: 0 8px 32px -8px rgba(99, 102, 241, 0.6), inset 0 1px 1px rgba(255,255,255,0.2) !important;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
-        .auth-btn-gradient:hover {
-          box-shadow: 0 12px 28px -6px rgba(99, 102, 241, 0.65) !important;
+        .auth-btn-gradient:hover:not(:disabled) {
+          box-shadow: 0 12px 36px -8px rgba(99, 102, 241, 0.8), inset 0 1px 1px rgba(255,255,255,0.3) !important;
           transform: translateY(-2px);
-          filter: brightness(1.1);
+          filter: brightness(1.05);
         }
       `}} />
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-7 w-full">
         {/* Error banner */}
         {error && (
           <div
-            className="flex items-start gap-3 px-4 py-3 rounded-[12px] border text-sm animate-slide-up"
+            className="flex items-start gap-3 px-4 py-3.5 rounded-[12px] border text-sm animate-slide-up"
             style={{
               background: 'rgba(239,68,68,0.15)',
               borderColor: 'rgba(239,68,68,0.3)',
               color: '#fca5a5',
             }}
           >
-            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+            <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
+            <span className="font-medium leading-relaxed">{error}</span>
           </div>
         )}
 
@@ -81,11 +81,11 @@ export function LoginForm() {
             placeholder="seu@email.com"
             autoComplete="email"
             disabled={isLoading}
-            leftIcon={<Mail size={18} className="text-white/40" />}
+            leftIcon={<Mail size={20} />}
           />
 
           {/* Password */}
-          <div>
+          <div className="flex flex-col gap-2.5">
             <Input
               label="Senha"
               name="password"
@@ -94,24 +94,24 @@ export function LoginForm() {
               placeholder="••••••••"
               autoComplete="current-password"
               disabled={isLoading}
-              leftIcon={<Lock size={18} className="text-white/40" />}
+              leftIcon={<Lock size={20} />}
               rightElement={
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
-                  className="p-1 hover:text-white transition-colors text-white/40"
+                  className="p-2 -mr-2 hover:text-white transition-colors text-white/50 hover:bg-white/5 rounded-lg"
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               }
             />
             {/* Forgot password */}
-            <div className="flex justify-end mt-3">
+            <div className="flex justify-end">
               <a
                 href="#"
-                className="text-[0.85rem] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                className="text-[0.85rem] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors py-1 px-1 rounded-md hover:bg-white/5"
               >
                 Esqueceu a senha?
               </a>
@@ -119,36 +119,29 @@ export function LoginForm() {
           </div>
         </div>
 
-        {/* Submit */}
-        <Button
-          type="submit"
-          size="lg"
-          isLoading={isLoading}
-          className="w-full mt-2 auth-btn-gradient text-white rounded-xl h-[54px] font-bold text-[1rem] flex items-center justify-center gap-2"
-        >
-          {isLoading ? 'Entrando...' : (
-            <>
-              Entrar na plataforma
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1 opacity-90">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </>
-          )}
-        </Button>
+        {/* Submit Area */}
+        <div className="flex flex-col gap-5 mt-2">
+          <Button
+            type="submit"
+            size="lg"
+            isLoading={isLoading}
+            className="w-full auth-btn-gradient text-white rounded-[14px] h-[56px] font-bold text-[1.05rem] flex items-center justify-center gap-2.5 group"
+          >
+            {isLoading ? 'Entrando...' : (
+              <>
+                Entrar na plataforma
+                <ArrowRight size={18} className="opacity-90 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
+          </Button>
 
-        {/* Divider */}
-        <div className="relative flex items-center py-4">
-          <div className="flex-grow border-t border-white/[0.08]"></div>
-          <span className="flex-shrink-0 mx-4 text-white/30 text-[0.85rem] font-medium">ou</span>
-          <div className="flex-grow border-t border-white/[0.08]"></div>
-        </div>
-
-        {/* Footer info */}
-        <div className="flex items-center justify-center gap-2.5 text-white/40">
-          <Lock size={14} className="opacity-70" />
-          <p className="text-[0.85rem] font-medium tracking-wide">
-            Acesso restrito a usuários autorizados
-          </p>
+          {/* Footer info */}
+          <div className="flex items-center justify-center gap-2 text-white/30 pt-1">
+            <Lock size={14} className="opacity-80" />
+            <p className="text-[0.85rem] font-medium tracking-wide">
+              Acesso restrito a usuários autorizados
+            </p>
+          </div>
         </div>
       </form>
     </div>
