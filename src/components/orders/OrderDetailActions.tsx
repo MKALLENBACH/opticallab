@@ -65,6 +65,7 @@ export function LabOrderDetailActions({
   const router = useRouter();
   const [notes, setNotes] = useState(internalNotes || '');
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [confirmingStatus, setConfirmingStatus] = useState<OrderStatus | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const currentStatus = status as OrderStatus;
@@ -72,6 +73,7 @@ export function LabOrderDetailActions({
 
   const saveNotes = async () => {
     setPendingAction('notes');
+    setConfirmingStatus(null);
     setError(null);
     setMessage(null);
 
@@ -88,11 +90,15 @@ export function LabOrderDetailActions({
   };
 
   const advanceStatus = async (nextStatus: OrderStatus) => {
-    const actionLabel = STATUS_LABELS[nextStatus].toLowerCase();
-    const shouldProceed = window.confirm(`Confirmar acao: ${actionLabel}?`);
-    if (!shouldProceed) return;
+    if (confirmingStatus !== nextStatus) {
+      setConfirmingStatus(nextStatus);
+      setError(null);
+      setMessage(`Clique novamente para confirmar: ${STATUS_LABELS[nextStatus].toLowerCase()}.`);
+      return;
+    }
 
     setPendingAction(nextStatus);
+    setConfirmingStatus(null);
     setError(null);
     setMessage(null);
 
@@ -156,7 +162,7 @@ export function LabOrderDetailActions({
                   leftIcon={statusIcon(nextStatus)}
                   className="w-full"
                 >
-                  {STATUS_LABELS[nextStatus]}
+                  {confirmingStatus === nextStatus ? `Confirmar: ${STATUS_LABELS[nextStatus]}` : STATUS_LABELS[nextStatus]}
                 </Button>
               ))}
             </div>

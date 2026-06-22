@@ -14,7 +14,14 @@ interface LabOption {
   name: string;
 }
 
-export function UserForm({ labs }: { labs: LabOption[] }) {
+interface OpticalStoreOption {
+  id: string;
+  name: string;
+  lab_id: string;
+  lab_name?: string | null;
+}
+
+export function UserForm({ labs, opticalStores }: { labs: LabOption[]; opticalStores: OpticalStoreOption[] }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,11 +36,21 @@ export function UserForm({ labs }: { labs: LabOption[] }) {
     const formData = new FormData(event.currentTarget);
     const role = formData.get('role') as UserRole;
     const needsLabId = role === UserRole.LAB_ADMIN || role === UserRole.LAB_USER;
+    const needsOpticalStoreId = role === UserRole.OPTICAL_ADMIN || role === UserRole.OPTICAL_USER;
     const labIdStr = formData.get('lab_id') as string;
-    const lab_id = labIdStr ? labIdStr : null;
+    const opticalStoreIdStr = formData.get('optical_store_id') as string;
+    const selectedOpticalStore = opticalStores.find((store) => store.id === opticalStoreIdStr);
+    const lab_id = needsOpticalStoreId ? selectedOpticalStore?.lab_id || null : labIdStr || null;
+    const optical_store_id = needsOpticalStoreId ? opticalStoreIdStr || null : null;
 
     if (needsLabId && !lab_id) {
       setError('Selecione um laboratorio para este perfil.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (needsOpticalStoreId && !optical_store_id) {
+      setError('Selecione uma otica para este perfil.');
       setIsLoading(false);
       return;
     }
@@ -45,7 +62,7 @@ export function UserForm({ labs }: { labs: LabOption[] }) {
       role,
       status: formData.get('status') as EntityStatus,
       lab_id,
-      optical_store_id: null,
+      optical_store_id,
     };
 
     const result = await createUserAction(data);
@@ -125,6 +142,8 @@ export function UserForm({ labs }: { labs: LabOption[] }) {
                 >
                   <option value={UserRole.LAB_ADMIN}>Admin Laboratorio</option>
                   <option value={UserRole.LAB_USER}>Usuario Laboratorio</option>
+                  <option value={UserRole.OPTICAL_ADMIN}>Admin Otica</option>
+                  <option value={UserRole.OPTICAL_USER}>Usuario Otica</option>
                   <option value={UserRole.PLATFORM_ADMIN}>Admin Global</option>
                 </select>
               </div>
@@ -144,6 +163,20 @@ export function UserForm({ labs }: { labs: LabOption[] }) {
                     <option value="">Selecione um laboratorio...</option>
                     {labs.map((lab) => (
                       <option key={lab.id} value={lab.id}>{lab.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(selectedRole === UserRole.OPTICAL_ADMIN || selectedRole === UserRole.OPTICAL_USER) && (
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Otica vinculada *</label>
+                  <select name="optical_store_id" required disabled={isLoading}>
+                    <option value="">Selecione uma otica...</option>
+                    {opticalStores.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.name}{store.lab_name ? ` - ${store.lab_name}` : ''}
+                      </option>
                     ))}
                   </select>
                 </div>

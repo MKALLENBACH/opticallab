@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PackageSearch, Search, ShoppingCart, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -56,17 +56,34 @@ function availabilityBadge(variant: OrderDraftVariant) {
 
 export function StoreSearchClient() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OrderDraftVariant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+  const lastSearchRef = useRef('');
 
-  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const terms = searchTerms(query);
-    if (!terms.length) return;
+  const runSearch = useCallback(async (value: string, force = false) => {
+    const terms = searchTerms(value);
+    const normalized = terms.join(' ');
+
+    if (!terms.length) {
+      requestIdRef.current += 1;
+      lastSearchRef.current = '';
+      setResults([]);
+      setHasSearched(false);
+      setMessage(null);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!force && normalized === lastSearchRef.current) return;
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    lastSearchRef.current = normalized;
 
     setIsLoading(true);
     setHasSearched(true);
@@ -86,10 +103,11 @@ export function StoreSearchClient() {
         minimum_stock,
         delivery_time_in_stock_days,
         production_time_out_of_stock_days,
-        lens_type:lens_types(
+        lens_type:lens_types!inner(
           id,
           name,
           brand,
+          status,
           category,
           material,
           refractive_index,
@@ -100,6 +118,7 @@ export function StoreSearchClient() {
         )
       `)
       .eq('status', 'active')
+      .eq('lens_type.status', 'active')
       .limit(24);
 
     for (const term of terms) {
@@ -107,6 +126,8 @@ export function StoreSearchClient() {
     }
 
     const { data, error } = await request;
+
+    if (requestId !== requestIdRef.current) return;
 
     if (error) {
       console.error(error);
@@ -117,6 +138,19 @@ export function StoreSearchClient() {
     }
 
     setIsLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void runSearch(query);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [query, runSearch]);
+
+  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await runSearch(query, true);
   };
 
   const addToDraft = (variant: OrderDraftVariant) => {
@@ -157,7 +191,6 @@ export function StoreSearchClient() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Ex: LL-VS -2 antirreflexo"
             leftIcon={<Search size={17} />}
-            disabled={isLoading}
             className="flex-1"
           />
           <Button type="submit" size="lg" isLoading={isLoading} className="sm:min-w-[150px]">
@@ -184,7 +217,7 @@ export function StoreSearchClient() {
                         {variant.name}
                       </p>
                       <p className="mt-1 text-[0.86rem] font-semibold text-slate-500">
-                        {variant.brand || 'Sem marca'} · {variant.material || 'Material nao informado'}
+                        {variant.brand || 'Sem marca'} - {variant.material || 'Material nao informado'}
                       </p>
                     </div>
                     {availabilityBadge(variant)}

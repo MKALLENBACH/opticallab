@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { Edit3 } from 'lucide-react';
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 import { Badge } from '@/components/ui/Badge';
 import { AvailabilityBadge, StatusBadge } from '@/components/ui/Premium';
@@ -89,6 +91,20 @@ export function StockTable({ data }: { data: StockData[] }) {
         {
           header: 'Status',
           accessor: (row) => <StatusBadge status={row.status} />,
+          align: 'right',
+        },
+        {
+          header: 'Acoes',
+          accessor: (row) => (
+            <Link
+              href={`/lab/stock/${row.id}`}
+              aria-label={`Editar ${row.sku}`}
+              className="inline-flex min-h-9 items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-950/35 px-3.5 py-2 text-[0.8125rem] font-bold text-slate-200 transition-all hover:border-violet-300/25 hover:bg-white/[0.055] hover:text-white"
+            >
+              <Edit3 size={14} />
+              Editar
+            </Link>
+          ),
           align: 'right',
         },
       ]}

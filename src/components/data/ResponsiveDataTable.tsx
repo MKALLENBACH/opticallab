@@ -153,29 +153,45 @@ export function ResponsiveDataTable<T>({
 
           <div className="grid grid-cols-1 gap-3 p-4 md:hidden">
             {filteredData.map((row) => (
-              <button
-                key={keyExtractor(row)}
-                type="button"
-                onClick={() => onRowClick?.(row)}
-                className={`
-                  w-full rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-left
-                  shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all
-                  ${onRowClick ? 'hover:border-violet-300/25 hover:bg-white/[0.055]' : 'cursor-default'}
-                `}
-              >
-                <div className="flex flex-col gap-3">
-                  {columns.filter((col) => !col.hideOnMobile).map((col, index) => (
-                    <div key={`${col.header}-${index}`} className="flex items-start justify-between gap-4">
-                      <span className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-slate-500">
-                        {col.header}
-                      </span>
-                      <div className="min-w-0 text-right text-[0.88rem] font-semibold text-slate-100">
-                        {renderCell(row, col)}
+              onRowClick ? (
+                <button
+                  key={keyExtractor(row)}
+                  type="button"
+                  onClick={() => onRowClick(row)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-violet-300/25 hover:bg-white/[0.055]"
+                >
+                  <div className="flex flex-col gap-3">
+                    {columns.filter((col) => !col.hideOnMobile).map((col, index) => (
+                      <div key={`${col.header}-${index}`} className="flex items-start justify-between gap-4">
+                        <span className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-slate-500">
+                          {col.header}
+                        </span>
+                        <div className="min-w-0 text-right text-[0.88rem] font-semibold text-slate-100">
+                          {renderCell(row, col)}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </button>
+              ) : (
+                <div
+                  key={keyExtractor(row)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                >
+                  <div className="flex flex-col gap-3">
+                    {columns.filter((col) => !col.hideOnMobile).map((col, index) => (
+                      <div key={`${col.header}-${index}`} className="flex items-start justify-between gap-4">
+                        <span className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-slate-500">
+                          {col.header}
+                        </span>
+                        <div className="min-w-0 text-right text-[0.88rem] font-semibold text-slate-100">
+                          {renderCell(row, col)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </button>
+              )
             ))}
           </div>
         </>

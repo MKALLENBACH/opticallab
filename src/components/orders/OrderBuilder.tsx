@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CalendarDays, PackageSearch, Save, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -86,7 +86,7 @@ function availabilityBadge(variant: OrderDraftVariant) {
 
 export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: OrderBuilderProps) {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [initialDraft] = useState(() => editOrder ?? readDraft(initialVariant));
 
   const [items, setItems] = useState<OrderDraftItem[]>(initialDraft.items);
@@ -100,6 +100,8 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const desiredDateRef = useRef<HTMLInputElement>(null);
+  const searchRequestIdRef = useRef(0);
+  const lastSearchRef = useRef('');
 
   const isEditing = Boolean(editOrder);
 
@@ -110,10 +112,24 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
 
   const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
-  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const terms = searchTerms(query);
-    if (!terms.length) return;
+  const runSearch = useCallback(async (value: string, force = false) => {
+    const terms = searchTerms(value);
+    const normalized = terms.join(' ');
+
+    if (!terms.length) {
+      searchRequestIdRef.current += 1;
+      lastSearchRef.current = '';
+      setResults([]);
+      setMessage(null);
+      setIsSearching(false);
+      return;
+    }
+
+    if (!force && normalized === lastSearchRef.current) return;
+
+    const requestId = searchRequestIdRef.current + 1;
+    searchRequestIdRef.current = requestId;
+    lastSearchRef.current = normalized;
 
     setIsSearching(true);
     setError(null);
@@ -133,10 +149,11 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
         minimum_stock,
         delivery_time_in_stock_days,
         production_time_out_of_stock_days,
-        lens_type:lens_types(
+        lens_type:lens_types!inner(
           id,
           name,
           brand,
+          status,
           category,
           material,
           refractive_index,
@@ -147,6 +164,7 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
         )
       `)
       .eq('status', 'active')
+      .eq('lens_type.status', 'active')
       .limit(12);
 
     for (const term of terms) {
@@ -154,6 +172,8 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
     }
 
     const { data, error: searchError } = await request;
+
+    if (requestId !== searchRequestIdRef.current) return;
 
     if (searchError) {
       setResults([]);
@@ -164,6 +184,19 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
     }
 
     setIsSearching(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void runSearch(query);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [query, runSearch]);
+
+  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await runSearch(query, true);
   };
 
   const addItem = (variant: OrderDraftVariant) => {
@@ -289,7 +322,6 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Ex: LL-VS -2 antirreflexo"
               leftIcon={<Search size={17} />}
-              disabled={isSearching}
               className="flex-1"
             />
             <Button type="submit" isLoading={isSearching} className="sm:min-w-[140px]">

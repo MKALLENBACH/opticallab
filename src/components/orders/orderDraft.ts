@@ -42,6 +42,7 @@ export function normalizeSearchQuery(value: string) {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/(-?\d+),(\d+)/g, '$1.$2')
     .toLowerCase()
     .trim();
 }

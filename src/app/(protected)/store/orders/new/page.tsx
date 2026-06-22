@@ -88,10 +88,11 @@ export default async function NewStoreOrderPage({
         axis,
         addition_add,
         item_notes,
-        lens_type:lens_types(
+        lens_type:lens_types!inner(
           id,
           name,
           brand,
+          status,
           category,
           material,
           refractive_index,
@@ -174,6 +175,7 @@ export default async function NewStoreOrderPage({
       .eq('id', variantId)
       .eq('lab_id', labId)
       .eq('status', 'active')
+      .eq('lens_type.status', 'active')
       .single()
     : { data: null };
 
