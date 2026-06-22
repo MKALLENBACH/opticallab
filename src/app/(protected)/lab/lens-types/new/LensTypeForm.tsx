@@ -1,24 +1,75 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock3, FileText, Glasses, Layers3, Save } from 'lucide-react';
+import { Clock3, FileText, Glasses, Layers3, Plus, Save, X } from 'lucide-react';
 import { createLensTypeAction } from '@/actions/lens-types';
+import { createLensTreatmentOption } from '@/actions/lens-treatment-options';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { ChipSelector, OptionChip } from '@/components/ui/OptionChip';
 import { FormActions, FormSection } from '@/components/ui/Premium';
-import { AVAILABLE_TREATMENTS } from '@/lib/constants/treatments';
+import { mergeTreatmentOptions, normalizeTreatmentName, OTHER_TREATMENT_OPTION, type TreatmentOption } from '@/lib/constants/treatments';
 import { EntityStatus, LensCategory, LensMaterial, RefractiveIndex } from '@/lib/types/enums';
 
-export function LensTypeForm() {
+interface LensTypeFormProps {
+  treatmentOptions: TreatmentOption[];
+}
+
+export function LensTypeForm({ treatmentOptions }: LensTypeFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingTreatment, setIsCreatingTreatment] = useState(false);
+  const [isAddingCustomTreatment, setIsAddingCustomTreatment] = useState(false);
+  const [newTreatmentName, setNewTreatmentName] = useState('');
+  const [treatmentError, setTreatmentError] = useState<string | null>(null);
+  const [treatmentMessage, setTreatmentMessage] = useState<string | null>(null);
+  const [availableTreatmentOptions, setAvailableTreatmentOptions] = useState<TreatmentOption[]>(
+    mergeTreatmentOptions(treatmentOptions)
+  );
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
 
   const toggleTreatment = (id: string) => {
     setSelectedTreatments((current) =>
       current.includes(id) ? current.filter((treatment) => treatment !== id) : [...current, id]
     );
+  };
+
+  const addTreatmentOption = (option: TreatmentOption) => {
+    setAvailableTreatmentOptions((current) => mergeTreatmentOptions([...current, option]));
+    setSelectedTreatments((current) => (
+      current.some((value) => normalizeTreatmentName(value) === normalizeTreatmentName(option.value))
+        ? current
+        : [...current, option.value]
+    ));
+  };
+
+  const handleAddCustomTreatment = async () => {
+    setTreatmentError(null);
+    setTreatmentMessage(null);
+
+    if (!newTreatmentName.trim()) {
+      setTreatmentError('Informe o nome do tratamento.');
+      return;
+    }
+
+    setIsCreatingTreatment(true);
+    const result = await createLensTreatmentOption(newTreatmentName);
+    setIsCreatingTreatment(false);
+
+    if (result.error || !result.option) {
+      setTreatmentError(result.error || 'Nao foi possivel adicionar o tratamento.');
+      return;
+    }
+
+    addTreatmentOption({
+      value: result.option.value,
+      label: result.option.label,
+      isDefault: false,
+    });
+    setNewTreatmentName('');
+    setIsAddingCustomTreatment(false);
+    setTreatmentMessage(result.option.message);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -119,28 +170,67 @@ export function LensTypeForm() {
             title="Tratamentos inclusos"
             description="Selecione todos os tratamentos que ja fazem parte desta lente."
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {AVAILABLE_TREATMENTS.map((treatment) => (
-                <label
-                  key={treatment.value}
-                  className={`
-                    flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border px-4 text-[0.88rem] font-bold transition-all
-                    ${selectedTreatments.includes(treatment.value)
-                      ? 'border-violet-300/40 bg-violet-500/16 text-white shadow-[0_0_26px_rgba(139,92,246,0.14)]'
-                      : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-white/20 hover:bg-white/[0.045]'}
-                  `}
-                >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-violet-400"
-                    checked={selectedTreatments.includes(treatment.value)}
-                    onChange={() => toggleTreatment(treatment.value)}
-                    disabled={isLoading}
-                  />
-                  <span>{treatment.label}</span>
-                </label>
-              ))}
+            <div className="flex flex-wrap gap-2.5">
+              <ChipSelector
+                options={availableTreatmentOptions}
+                selectedValues={selectedTreatments}
+                onToggle={toggleTreatment}
+                disabled={isLoading || isCreatingTreatment}
+              />
+              <OptionChip
+                value={OTHER_TREATMENT_OPTION.value}
+                selected={isAddingCustomTreatment}
+                disabled={isLoading || isCreatingTreatment}
+                onClick={() => {
+                  setIsAddingCustomTreatment((current) => !current);
+                  setTreatmentError(null);
+                  setTreatmentMessage(null);
+                }}
+              >
+                {OTHER_TREATMENT_OPTION.label}
+              </OptionChip>
             </div>
+
+            {isAddingCustomTreatment && (
+              <div className="mt-4 rounded-2xl border border-violet-300/18 bg-violet-500/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto_auto] lg:items-end">
+                  <Input
+                    label="Nome do novo tratamento"
+                    value={newTreatmentName}
+                    onChange={(event) => setNewTreatmentName(event.target.value)}
+                    placeholder="Ex: Antirrisco premium"
+                    disabled={isCreatingTreatment}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isCreatingTreatment}
+                    onClick={() => {
+                      setIsAddingCustomTreatment(false);
+                      setNewTreatmentName('');
+                      setTreatmentError(null);
+                    }}
+                    leftIcon={<X size={16} />}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    isLoading={isCreatingTreatment}
+                    onClick={handleAddCustomTreatment}
+                    leftIcon={<Plus size={16} />}
+                  >
+                    Adicionar tratamento
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {(treatmentError || treatmentMessage) && (
+              <div className={`mt-3 rounded-2xl border px-4 py-3 text-[0.88rem] font-semibold ${treatmentError ? 'border-red-400/25 bg-red-500/12 text-red-100' : 'border-emerald-400/25 bg-emerald-500/12 text-emerald-100'}`}>
+                {treatmentError || treatmentMessage}
+              </div>
+            )}
           </FormSection>
 
           <FormSection
