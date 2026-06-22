@@ -47,11 +47,16 @@ export default async function StoreDashboardPage() {
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('optical_store_id', storeId).eq('status', 'finalizado'),
     supabase
       .from('orders')
-      .select('id, order_number, status, priority, desired_delivery_date, created_at')
+      .select('id, order_number, status, priority, desired_delivery_date, created_at, items:order_items(id)')
       .eq('optical_store_id', storeId)
       .order('created_at', { ascending: false })
       .limit(5),
   ]);
+
+  const recentOrderRows = (recentOrders || []).map((order) => ({
+    ...order,
+    item_count: Array.isArray(order.items) ? order.items.length : 0,
+  })) as OrderTableRow[];
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -97,7 +102,7 @@ export default async function StoreDashboardPage() {
         }
         contentClassName="p-0"
       >
-        <OrdersTable data={(recentOrders || []) as OrderTableRow[]} variant="store" showSearch={false} />
+        <OrdersTable data={recentOrderRows} variant="store" showSearch={false} />
       </SectionCard>
     </div>
   );

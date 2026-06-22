@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { StoreOrderDetailActions } from '@/components/orders/OrderDetailActions';
 import { OrderDetailView, type OrderDetailData, type OrderHistoryDetail, type OrderItemDetail } from '@/components/orders/OrderDetailView';
 import { createClient } from '@/lib/supabase/server';
 
@@ -94,7 +95,8 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
 
   const typedHistory = (history || []).map((entry) => ({
     ...entry,
-    changed_by_name: profileMap.get(entry.changed_by_profile_id) || null,
+    changed_by_name: profileMap.get(entry.changed_by_profile_id)
+      || (entry.old_status && entry.old_status !== entry.new_status ? 'Laboratorio' : null),
   })) as OrderHistoryDetail[];
 
   return (
@@ -105,6 +107,7 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
       backHref="/store/orders"
       eyebrow="Meu pedido"
       description="Acompanhe status, itens solicitados e historico do pedido enviado ao laboratorio."
+      sideActions={<StoreOrderDetailActions orderId={typedOrder.id} status={typedOrder.status} />}
     />
   );
 }

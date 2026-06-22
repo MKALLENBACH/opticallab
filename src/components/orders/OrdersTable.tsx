@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 import { PriorityBadge, StatusBadge } from '@/components/ui/Premium';
+import { formatDateOnly } from '@/lib/format/date';
 
 export interface OrderTableRow {
   id: string;
@@ -11,6 +12,7 @@ export interface OrderTableRow {
   priority: string;
   desired_delivery_date: string | null;
   created_at: string;
+  item_count?: number;
   optical_store?: {
     name: string | null;
   } | null;
@@ -44,10 +46,11 @@ export function OrdersTable({ data, variant, showSearch = true }: OrdersTablePro
       : []),
     { header: 'Status', accessor: (row: OrderTableRow) => <StatusBadge status={row.status} /> },
     { header: 'Prioridade', accessor: (row: OrderTableRow) => <PriorityBadge priority={row.priority} /> },
+    { header: 'Itens', accessor: (row: OrderTableRow) => row.item_count ?? '-', align: 'right' as const },
     { header: 'Criado em', accessor: (row: OrderTableRow) => new Date(row.created_at).toLocaleDateString('pt-BR') },
     {
       header: 'Entrega desejada',
-      accessor: (row: OrderTableRow) => row.desired_delivery_date ? new Date(row.desired_delivery_date).toLocaleDateString('pt-BR') : '-',
+      accessor: (row: OrderTableRow) => formatDateOnly(row.desired_delivery_date),
       align: 'right' as const,
     },
   ];

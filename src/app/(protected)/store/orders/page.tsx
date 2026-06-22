@@ -35,7 +35,8 @@ export default async function StoreOrdersPage() {
       status,
       priority,
       desired_delivery_date,
-      created_at
+      created_at,
+      items:order_items(id)
     `)
     .eq('optical_store_id', storeId)
     .order('created_at', { ascending: false });
@@ -44,7 +45,10 @@ export default async function StoreOrdersPage() {
     console.error('Error fetching store orders:', error);
   }
 
-  const typedOrders = (orders || []) as OrderTableRow[];
+  const typedOrders = (orders || []).map((order) => ({
+    ...order,
+    item_count: Array.isArray(order.items) ? order.items.length : 0,
+  })) as OrderTableRow[];
 
   return (
     <div className="space-y-6 animate-slide-up">

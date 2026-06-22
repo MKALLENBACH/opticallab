@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { LabOrderDetailActions } from '@/components/orders/OrderDetailActions';
 import { OrderDetailView, type OrderDetailData, type OrderHistoryDetail, type OrderItemDetail } from '@/components/orders/OrderDetailView';
 import { createClient } from '@/lib/supabase/server';
 
@@ -104,6 +105,7 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
       eyebrow="Pedido recebido"
       description="Detalhes operacionais, itens, historico e observacoes do pedido recebido da otica."
       showInternalNotes
+      sideActions={<LabOrderDetailActions orderId={typedOrder.id} status={typedOrder.status} internalNotes={typedOrder.internal_notes} />}
     />
   );
 }

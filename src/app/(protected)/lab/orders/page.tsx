@@ -36,7 +36,8 @@ export default async function LabOrdersPage() {
       priority,
       desired_delivery_date,
       created_at,
-      optical_store:optical_stores(name)
+      optical_store:optical_stores(name),
+      items:order_items(id)
     `)
     .eq('lab_id', labId)
     .order('created_at', { ascending: false });
@@ -48,6 +49,7 @@ export default async function LabOrdersPage() {
   const typedOrders = (orders || []).map((order) => ({
     ...order,
     optical_store: Array.isArray(order.optical_store) ? order.optical_store[0] : order.optical_store,
+    item_count: Array.isArray(order.items) ? order.items.length : 0,
   })) as OrderTableRow[];
 
   return (

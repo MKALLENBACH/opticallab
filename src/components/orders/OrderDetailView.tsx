@@ -1,4 +1,5 @@
 import { CalendarClock, ClipboardList, FileText, Glasses, History, Store } from 'lucide-react';
+import type { ReactNode } from 'react';
 import {
   EmptyState,
   InfoRow,
@@ -8,6 +9,7 @@ import {
   StatusBadge,
   TimelineStep,
 } from '@/components/ui/Premium';
+import { formatDateOnly } from '@/lib/format/date';
 
 interface OpticalStoreSummary {
   name: string | null;
@@ -70,6 +72,7 @@ interface OrderDetailViewProps {
   eyebrow: string;
   description: string;
   showInternalNotes?: boolean;
+  sideActions?: ReactNode;
 }
 
 const ORDER_STEPS = [
@@ -81,8 +84,7 @@ const ORDER_STEPS = [
 ];
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return '-';
-  return new Date(value).toLocaleDateString('pt-BR');
+  return formatDateOnly(value);
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -140,6 +142,7 @@ export function OrderDetailView({
   eyebrow,
   description,
   showInternalNotes = false,
+  sideActions,
 }: OrderDetailViewProps) {
   const currentStepIndex = ORDER_STEPS.findIndex((step) => step.value === order.status);
   const isCanceled = order.status === 'cancelado';
@@ -158,6 +161,8 @@ export function OrderDetailView({
           </div>
         }
       />
+
+      {sideActions}
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <SectionCard icon={ClipboardList} title="Resumo do pedido" description="Principais dados operacionais do pedido.">
