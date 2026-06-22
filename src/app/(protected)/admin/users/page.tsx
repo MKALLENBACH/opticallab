@@ -1,11 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import Link from 'next/link';
 import { UsersTable } from './UsersTable';
 import { EntityStatus, UserRole } from '@/lib/types/enums';
+import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
+import { Plus, Users } from 'lucide-react';
 
-export const metadata = { title: 'Usuários | LenteLink Admin' };
+export const metadata = { title: 'Usuarios | LenteLink Admin' };
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
@@ -19,7 +18,8 @@ export default async function AdminUsersPage() {
       role,
       status,
       created_at,
-      lab:labs(name)
+      lab:labs(name),
+      optical_store:optical_stores(name)
     `)
     .order('created_at', { ascending: false });
 
@@ -27,35 +27,31 @@ export default async function AdminUsersPage() {
     console.error('Error fetching users:', error);
   }
 
-  const typedUsers = (users || []).map(user => ({
+  const typedUsers = (users || []).map((user) => ({
     ...user,
     role: user.role as UserRole,
     status: user.status as EntityStatus,
-    lab: Array.isArray(user.lab) ? user.lab[0] : user.lab
+    lab: Array.isArray(user.lab) ? user.lab[0] : user.lab,
+    optical_store: Array.isArray(user.optical_store) ? user.optical_store[0] : user.optical_store,
   }));
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="page-header flex items-start justify-between gap-4">
-        <div>
-          <h2>Usuários Globais</h2>
-          <p>Lista completa de usuários registrados na plataforma.</p>
-        </div>
-        <Link href="/admin/users/new">
-          <Button
-            variant="primary"
-            leftIcon={
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            }
-          >
-            Novo Usuário
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Admin Global"
+        title="Usuarios"
+        description="Controle acessos, roles e vinculos com laboratorios ou oticas."
+        actions={<HeaderAction href="/admin/users/new" icon={<Plus size={17} />}>Novo usuario</HeaderAction>}
+      />
 
-      <Card className="overflow-hidden">
+      <SectionCard
+        icon={Users}
+        title="Usuarios da plataforma"
+        description="Filtre por nome, email, role, laboratorio ou status."
+        contentClassName="p-0"
+      >
         <UsersTable data={typedUsers} />
-      </Card>
+      </SectionCard>
     </div>
   );
 }

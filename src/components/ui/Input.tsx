@@ -14,18 +14,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || generatedId;
 
     return (
-      <div className={`flex flex-col gap-2 w-full ${className}`}>
+      <div className={`flex w-full flex-col gap-2 ${className}`}>
         {label && (
           <label
             htmlFor={inputId}
-            className="text-[0.9rem] font-semibold text-white/90 ml-1"
+            className="ml-1 text-[0.86rem] font-bold text-slate-200"
           >
             {label}
           </label>
         )}
-        <div className="relative flex items-center w-full">
+        <div className="relative flex w-full items-center">
           {leftIcon && (
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center text-white/50 z-10">
+            <span className="pointer-events-none absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-center text-slate-500">
               {leftIcon}
             </span>
           )}
@@ -33,31 +33,30 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             ref={ref}
             className={`
-              w-full bg-[rgba(15,17,26,0.75)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
-              border border-white/10 rounded-[18px]
-              py-[14px] text-[0.95rem] font-medium
+              w-full bg-slate-950/62 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]
+              border border-white/10 rounded-2xl
+              min-h-12 py-3 text-[0.95rem] font-medium
               text-white
-              placeholder:text-white/40
-              transition-all duration-300
+              placeholder:text-slate-500
+              transition-all duration-200
               ${leftIcon ? 'pl-14' : 'pl-4'}
               ${rightElement ? 'pr-14' : 'pr-4'}
               ${error
-                ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.15)] bg-[rgba(239,68,68,0.08)]'
-                : 'focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:shadow-[0_0_22px_rgba(129,140,248,0.16),inset_0_0_0_1px_rgba(129,140,248,0.35)] focus:bg-[rgba(20,22,35,0.75)] hover:border-white/25 hover:bg-[rgba(20,22,35,0.7)]'
+                ? 'border-red-400/55 bg-red-500/10 focus:border-red-400 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.14)]'
+                : 'focus:border-violet-300/60 focus:ring-2 focus:ring-violet-400/15 focus:shadow-[0_0_24px_rgba(129,140,248,0.13),inset_0_0_0_1px_rgba(129,140,248,0.18)] focus:bg-slate-950/80 hover:border-white/20 hover:bg-slate-950/72'
               }
-              disabled:bg-white/5 disabled:text-white/50
-              disabled:cursor-not-allowed disabled:opacity-60
+              disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-white/50 disabled:opacity-60
             `}
             {...props}
           />
           {rightElement && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center z-10">
+            <span className="absolute right-3 top-1/2 z-10 flex -translate-y-1/2 items-center">
               {rightElement}
             </span>
           )}
         </div>
         {error && (
-          <span className="text-[0.8125rem] text-red-400 font-medium flex items-center gap-1.5 ml-1">
+          <span className="ml-1 flex items-center gap-1.5 text-[0.8125rem] font-medium text-red-300">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
             </svg>
@@ -65,7 +64,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           </span>
         )}
         {!error && helperText && (
-          <span className="text-[0.8125rem] text-white/40 ml-1">{helperText}</span>
+          <span className="ml-1 text-[0.8125rem] text-slate-500">{helperText}</span>
         )}
       </div>
     );

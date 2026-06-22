@@ -1,11 +1,16 @@
-import { createClient } from '@/lib/supabase/server';
-import { Package, Clock, CheckCircle, ArrowUpRight, ClipboardList } from 'lucide-react';
-import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
-import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent } from '@/components/ui/Card';
 import Link from 'next/link';
+import { CheckCircle2, Clock3, Package, Search, ShoppingCart } from 'lucide-react';
+import { OrdersTable, type OrderTableRow } from '@/components/orders/OrdersTable';
+import {
+  EmptyState,
+  HeaderAction,
+  MetricCard,
+  PageHeader,
+  SectionCard,
+} from '@/components/ui/Premium';
+import { createClient } from '@/lib/supabase/server';
 
-export const metadata = { title: 'Painel da Ótica | LenteLink' };
+export const metadata = { title: 'Painel da Otica | LenteLink' };
 
 export default async function StoreDashboardPage() {
   const supabase = await createClient();
@@ -23,9 +28,11 @@ export default async function StoreDashboardPage() {
 
   if (!storeId) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <p className="text-[var(--color-text-muted)]">Ótica não encontrada para o seu usuário.</p>
-      </div>
+      <EmptyState
+        icon={ShoppingCart}
+        title="Otica nao encontrada"
+        description="Seu usuario ainda nao esta vinculado a uma otica ativa."
+      />
     );
   }
 
@@ -33,136 +40,65 @@ export default async function StoreDashboardPage() {
     { count: totalOrdersCount },
     { count: pendingOrdersCount },
     { count: finishedOrdersCount },
-    { data: recentOrders }
+    { data: recentOrders },
   ] = await Promise.all([
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('optical_store_id', storeId),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('optical_store_id', storeId).eq('status', 'aguardando_confirmacao'),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('optical_store_id', storeId).eq('status', 'finalizado'),
-    supabase.from('orders').select('id, order_number, status, created_at').eq('optical_store_id', storeId).order('created_at', { ascending: false }).limit(5)
+    supabase
+      .from('orders')
+      .select('id, order_number, status, priority, desired_delivery_date, created_at')
+      .eq('optical_store_id', storeId)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
 
-  const metrics = [
-    {
-      title: 'Pedidos em Aberto',
-      value: pendingOrdersCount ?? 0,
-      icon: Clock,
-      gradient: 'linear-gradient(135deg,#f59e0b,#d97706)',
-      accent: 'accent-warning',
-      urgent: (pendingOrdersCount ?? 0) > 0,
-    },
-    {
-      title: 'Pedidos Finalizados',
-      value: finishedOrdersCount ?? 0,
-      icon: CheckCircle,
-      gradient: 'linear-gradient(135deg,#10b981,#059669)',
-      accent: 'accent-success',
-    },
-    {
-      title: 'Total de Pedidos',
-      value: totalOrdersCount ?? 0,
-      icon: Package,
-      gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-      accent: 'accent-primary',
-    },
-  ];
-
-  const formatStatus = (status: string) => {
-    const map: Record<string, { label: string; variant: 'warning' | 'info' | 'success' | 'error' | 'default' }> = {
-      aguardando_confirmacao: { label: 'Aguardando', variant: 'warning' },
-      confirmado: { label: 'Confirmado', variant: 'info' },
-      em_producao: { label: 'Em produção', variant: 'info' },
-      em_entrega: { label: 'Em entrega', variant: 'default' },
-      finalizado: { label: 'Finalizado', variant: 'success' },
-      cancelado: { label: 'Cancelado', variant: 'error' },
-    };
-    const { label, variant } = map[status] ?? { label: status, variant: 'default' as const };
-    return <Badge variant={variant} dot>{label}</Badge>;
-  };
-
   return (
-    <div className="space-y-8 animate-slide-up">
+    <div className="space-y-6 animate-slide-up">
+      <PageHeader
+        eyebrow="Otica"
+        title="Painel da Otica"
+        description="Acompanhe pedidos em aberto, entregas finalizadas e o historico recente com o laboratorio."
+        actions={<HeaderAction href="/store/search" icon={<Search size={17} />}>Buscar lentes</HeaderAction>}
+      />
 
-      {/* ── Header ── */}
-      <div className="page-header">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2>Painel da Ótica</h2>
-            <p>Acompanhe o status dos seus pedidos com o laboratório.</p>
-          </div>
-          <Link
-            href="/store/search"
-            className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)]
-                       text-sm font-semibold text-white transition-all hover:opacity-90
-                       active:scale-[0.97] flex-shrink-0"
-            style={{ background: 'var(--gradient-primary)' }}
-          >
-            Buscar lentes <ArrowUpRight size={14} />
-          </Link>
-        </div>
-      </div>
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <MetricCard
+          title="Pedidos em aberto"
+          value={pendingOrdersCount ?? 0}
+          icon={Clock3}
+          tone="amber"
+          href="/store/orders"
+        />
+        <MetricCard
+          title="Pedidos finalizados"
+          value={finishedOrdersCount ?? 0}
+          icon={CheckCircle2}
+          tone="emerald"
+          href="/store/orders"
+        />
+        <MetricCard
+          title="Total de pedidos"
+          value={totalOrdersCount ?? 0}
+          icon={Package}
+          tone="violet"
+          href="/store/orders"
+        />
+      </section>
 
-      {/* ── Metrics ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-children">
-        {metrics.map((m, i) => {
-          const Icon = m.icon;
-          return (
-            <div
-              key={i}
-              className={`stat-card-accent ${m.accent} bg-[var(--color-bg-surface)] rounded-[var(--radius-xl)]
-                         border border-[var(--color-border)] p-6 flex items-start justify-between gap-4
-                         transition-all duration-200 hover:shadow-[var(--shadow-lg)] hover:-translate-y-px
-                         animate-slide-up`}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-[0.8125rem] font-medium text-[var(--color-text-muted)] leading-none mb-3">
-                  {m.title}
-                </p>
-                <p className={`text-3xl font-bold tracking-tight ${m.urgent ? 'text-[var(--color-warning)]' : 'text-[var(--color-text-base)]'}`}>
-                  {m.value.toLocaleString('pt-BR')}
-                </p>
-              </div>
-              <div
-                className="w-11 h-11 rounded-[var(--radius-lg)] flex items-center justify-center flex-shrink-0"
-                style={{ background: m.gradient }}
-              >
-                <Icon size={20} className="text-white" />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── Recent orders ── */}
-      <Card className="overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-border)]">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center shadow-[var(--shadow-glow)]"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              <ClipboardList size={16} className="text-white" />
-            </div>
-            <h3 className="text-base font-bold text-[var(--color-text-base)]">
-              Últimos pedidos
-            </h3>
-          </div>
-          <Link href="/store/orders" className="text-sm font-semibold hover:opacity-80 transition-opacity" style={{ color: 'var(--color-primary)' }}>
+      <SectionCard
+        icon={ShoppingCart}
+        title="Ultimos pedidos"
+        description="Acompanhe rapidamente os pedidos mais recentes enviados ao laboratorio."
+        actions={
+          <Link href="/store/orders" className="text-[0.86rem] font-bold text-violet-300 transition-colors hover:text-white">
             Ver todos
           </Link>
-        </div>
-        <CardContent className="p-0">
-          <ResponsiveDataTable
-            data={recentOrders || []}
-            keyExtractor={(row) => row.id}
-            columns={[
-              { header: 'Nº Pedido', accessor: 'order_number', className: 'font-semibold font-mono' },
-              { header: 'Status', accessor: (row) => formatStatus(row.status) },
-              { header: 'Data', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
-            ]}
-            emptyMessage="Você ainda não possui pedidos registrados."
-          />
-        </CardContent>
-      </Card>
+        }
+        contentClassName="p-0"
+      >
+        <OrdersTable data={(recentOrders || []) as OrderTableRow[]} variant="store" showSearch={false} />
+      </SectionCard>
     </div>
   );
 }

@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { Barcode, Boxes, Glasses, Ruler, Save } from 'lucide-react';
 import { createLensVariantAction } from '@/actions/lens-variants';
-import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { LensSide, EntityStatus } from '@/lib/types/enums';
+import { Input } from '@/components/ui/Input';
+import { FormActions, FormSection } from '@/components/ui/Premium';
+import { EntityStatus, LensSide } from '@/lib/types/enums';
 
 interface LensTypeOption {
   id: string;
@@ -17,14 +19,12 @@ export function LensVariantForm({ lensTypes }: { lensTypes: LensTypeOption[] }) 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    
-    // Converte os valores para os tipos esperados
+    const formData = new FormData(event.currentTarget);
     const esf = formData.get('sphere_esf') as string;
     const cil = formData.get('cylinder_cil') as string;
     const add = formData.get('addition_add') as string;
@@ -37,16 +37,16 @@ export function LensVariantForm({ lensTypes }: { lensTypes: LensTypeOption[] }) 
       cylinder_cil: cil ? parseFloat(cil) : undefined,
       addition_add: add ? parseFloat(add) : undefined,
       axis: axis ? parseInt(axis) : undefined,
-      side: formData.get('side') as LensSide || undefined,
+      side: (formData.get('side') as LensSide) || undefined,
       quantity_available: parseInt(formData.get('quantity_available') as string) || 0,
       minimum_stock: parseInt(formData.get('minimum_stock') as string) || undefined,
-      location: formData.get('location') as string || undefined,
-      barcode: formData.get('barcode') as string || undefined,
+      location: (formData.get('location') as string) || undefined,
+      barcode: (formData.get('barcode') as string) || undefined,
       status: EntityStatus.ACTIVE,
     };
 
     const result = await createLensVariantAction(data);
-    
+
     if (result?.error) {
       setError(result.error);
       setIsLoading(false);
@@ -55,120 +55,77 @@ export function LensVariantForm({ lensTypes }: { lensTypes: LensTypeOption[] }) 
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {error && (
-            <div className="bg-[var(--color-error-bg)] border border-[var(--color-error)] text-[var(--color-error)] px-4 py-3 rounded-md text-sm">
+            <div className="rounded-2xl border border-red-400/25 bg-red-500/12 px-4 py-3 text-[0.9rem] font-semibold text-red-100">
               {error}
             </div>
           )}
 
-          {/* Identificação Básica */}
-          <section>
-            <h3 className="text-lg font-semibold text-[var(--color-text-base)] mb-4">Identificação do Produto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-1 w-full">
-                <label className="text-sm font-medium text-[var(--color-text-base)]">
-                  Lente Base (Catálogo) *
-                </label>
-                <select
-                  name="lens_type_id"
-                  required
-                  disabled={isLoading}
-                  className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-md px-3 py-2 text-base focus:border-[var(--color-primary)] outline-none"
-                >
+          <FormSection
+            icon={Glasses}
+            title="Produto base"
+            description="Vincule o SKU a uma lente ja cadastrada no catalogo."
+          >
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Lente base *</label>
+                <select name="lens_type_id" required disabled={isLoading}>
                   <option value="">Selecione a lente base...</option>
-                  {lensTypes.map(lt => (
-                    <option key={lt.id} value={lt.id}>
-                      {lt.name} {lt.brand ? `(${lt.brand})` : ''}
+                  {lensTypes.map((lensType) => (
+                    <option key={lensType.id} value={lensType.id}>
+                      {lensType.name} {lensType.brand ? `(${lensType.brand})` : ''}
                     </option>
                   ))}
                 </select>
               </div>
 
               <Input
-                label="SKU (Código Único) *"
+                label="SKU *"
                 name="sku"
                 required
                 placeholder="Ex: VS-AR-001"
-                helperText="Obrigatório ser único para o seu laboratório."
+                helperText="Deve ser unico dentro do laboratorio."
+                leftIcon={<Barcode size={16} />}
                 disabled={isLoading}
               />
-              
-              <Input
-                label="Código de Barras"
-                name="barcode"
-                placeholder="EAN/UPC..."
-                disabled={isLoading}
-              />
-              
-              <div className="flex flex-col gap-1 w-full">
-                <label className="text-sm font-medium text-[var(--color-text-base)]">
-                  Lado da Lente
-                </label>
-                <select
-                  name="side"
-                  defaultValue={LensSide.NOT_APPLICABLE}
-                  disabled={isLoading}
-                  className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-md px-3 py-2 text-base focus:border-[var(--color-primary)] outline-none"
-                >
-                  <option value={LensSide.NOT_APPLICABLE}>Não aplicável / Ambos</option>
-                  <option value={LensSide.RIGHT}>Olho Direito (OD)</option>
-                  <option value={LensSide.LEFT}>Olho Esquerdo (OE)</option>
-                  <option value={LensSide.PAIR}>Par Completo</option>
+
+              <Input label="Codigo de barras" name="barcode" placeholder="EAN/UPC" disabled={isLoading} />
+
+              <div className="flex flex-col gap-2">
+                <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Lado da lente</label>
+                <select name="side" defaultValue={LensSide.NOT_APPLICABLE} disabled={isLoading}>
+                  <option value={LensSide.NOT_APPLICABLE}>Nao aplicavel / ambos</option>
+                  <option value={LensSide.RIGHT}>Olho direito (OD)</option>
+                  <option value={LensSide.LEFT}>Olho esquerdo (OE)</option>
+                  <option value={LensSide.PAIR}>Par completo</option>
                 </select>
               </div>
             </div>
-          </section>
+          </FormSection>
 
-          {/* Dioptria / Grau */}
-          <section className="border-t border-[var(--color-border)] pt-6">
-            <h3 className="text-lg font-semibold text-[var(--color-text-base)] mb-4">Dioptria (Grau)</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <Input
-                label="Esférico (ESF)"
-                name="sphere_esf"
-                type="number"
-                step="0.25"
-                placeholder="0.00"
-                disabled={isLoading}
-              />
-              <Input
-                label="Cilíndrico (CIL)"
-                name="cylinder_cil"
-                type="number"
-                step="0.25"
-                placeholder="0.00"
-                disabled={isLoading}
-              />
-              <Input
-                label="Eixo"
-                name="axis"
-                type="number"
-                min="0"
-                max="180"
-                step="1"
-                placeholder="0 - 180"
-                disabled={isLoading}
-              />
-              <Input
-                label="Adição (ADD)"
-                name="addition_add"
-                type="number"
-                step="0.25"
-                min="0"
-                placeholder="0.00"
-                disabled={isLoading}
-              />
+          <FormSection
+            icon={Ruler}
+            title="Dioptria"
+            description="Informe grau, eixo e adicao quando aplicavel."
+          >
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <Input label="Esferico (ESF)" name="sphere_esf" type="number" step="0.25" placeholder="0.00" disabled={isLoading} />
+              <Input label="Cilindrico (CIL)" name="cylinder_cil" type="number" step="0.25" placeholder="0.00" disabled={isLoading} />
+              <Input label="Eixo" name="axis" type="number" min="0" max="180" step="1" placeholder="0 - 180" disabled={isLoading} />
+              <Input label="Adicao (ADD)" name="addition_add" type="number" step="0.25" min="0" placeholder="0.00" disabled={isLoading} />
             </div>
-          </section>
+          </FormSection>
 
-          {/* Estoque */}
-          <section className="border-t border-[var(--color-border)] pt-6">
-            <h3 className="text-lg font-semibold text-[var(--color-text-base)] mb-4">Estoque e Localização</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormSection
+            icon={Boxes}
+            title="Estoque e localizacao"
+            description="Controle disponibilidade imediata e ponto fisico de separacao."
+          >
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
               <Input
-                label="Quantidade Atual *"
+                label="Quantidade atual *"
                 name="quantity_available"
                 type="number"
                 min="0"
@@ -177,7 +134,7 @@ export function LensVariantForm({ lensTypes }: { lensTypes: LensTypeOption[] }) 
                 disabled={isLoading}
               />
               <Input
-                label="Estoque Mínimo"
+                label="Estoque minimo"
                 name="minimum_stock"
                 type="number"
                 min="0"
@@ -185,27 +142,22 @@ export function LensVariantForm({ lensTypes }: { lensTypes: LensTypeOption[] }) 
                 disabled={isLoading}
               />
               <Input
-                label="Localização Físca"
+                label="Localizacao fisica"
                 name="location"
-                placeholder="Ex: Corredor A, Prateleira 2"
+                placeholder="Ex: Corredor A, prateleira 2"
                 disabled={isLoading}
               />
             </div>
-          </section>
+          </FormSection>
 
-          <div className="flex justify-end gap-3 mt-4 border-t border-[var(--color-border)] pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              disabled={isLoading}
-              onClick={() => window.history.back()}
-            >
+          <FormActions>
+            <Button type="button" variant="outline" disabled={isLoading} onClick={() => window.history.back()}>
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" isLoading={isLoading}>
-              Salvar Variante
+            <Button type="submit" isLoading={isLoading} rightIcon={<Save size={17} />}>
+              Salvar SKU
             </Button>
-          </div>
+          </FormActions>
         </form>
       </CardContent>
     </Card>

@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import Link from 'next/link';
 import { StockTable } from './StockTable';
+import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
+import { Boxes, Plus } from 'lucide-react';
 
 export const metadata = { title: 'Estoque (SKUs) | LenteLink' };
 
@@ -22,8 +21,8 @@ export default async function LabStockPage() {
 
   if (!labId) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <p className="text-[var(--color-text-muted)]">Laboratório não encontrado.</p>
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <p className="text-[var(--color-text-muted)]">Laboratorio nao encontrado.</p>
       </div>
     );
   }
@@ -35,9 +34,14 @@ export default async function LabStockPage() {
       sku,
       sphere_esf,
       cylinder_cil,
+      axis,
       addition_add,
       quantity_available,
-      lens_type:lens_types(name)
+      minimum_stock,
+      delivery_time_in_stock_days,
+      production_time_out_of_stock_days,
+      status,
+      lens_type:lens_types(name, brand, material, treatments)
     `)
     .eq('lab_id', labId)
     .order('created_at', { ascending: false })
@@ -47,33 +51,28 @@ export default async function LabStockPage() {
     console.error('Error fetching stock:', error);
   }
 
-  const typedVariants = (variants || []).map(v => ({
-    ...v,
-    lens_type: Array.isArray(v.lens_type) ? v.lens_type[0] : v.lens_type
+  const typedVariants = (variants || []).map((variant) => ({
+    ...variant,
+    lens_type: Array.isArray(variant.lens_type) ? variant.lens_type[0] : variant.lens_type,
   }));
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="page-header flex items-start justify-between gap-4">
-        <div>
-          <h2>Estoque (SKUs)</h2>
-          <p>Gerencie as variantes físicas com grau das lentes do seu catálogo.</p>
-        </div>
-        <Link href="/lab/stock/new">
-          <Button
-            variant="primary"
-            leftIcon={
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            }
-          >
-            Nova Variante
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Estoque"
+        title="Estoque e SKUs"
+        description="Controle variantes tecnicas por grau, disponibilidade, prazos e localizacao operacional."
+        actions={<HeaderAction href="/lab/stock/new" icon={<Plus size={17} />}>Novo SKU</HeaderAction>}
+      />
 
-      <Card className="overflow-hidden">
+      <SectionCard
+        icon={Boxes}
+        title="Inventario tecnico"
+        description="Busque por SKU, lente, material ou grau. Estoque baixo recebe destaque automatico."
+        contentClassName="p-0"
+      >
         <StockTable data={typedVariants} />
-      </Card>
+      </SectionCard>
     </div>
   );
 }

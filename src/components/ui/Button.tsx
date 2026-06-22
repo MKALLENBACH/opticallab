@@ -21,57 +21,59 @@ export function Button({
 }: ButtonProps) {
   const baseStyles = `
     inline-flex items-center justify-center gap-2
-    font-semibold rounded-[var(--radius-md)]
+    font-bold rounded-2xl
     transition-all duration-200 select-none
     focus-visible:outline focus-visible:outline-2
-    focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]
+    focus-visible:outline-offset-2 focus-visible:outline-violet-300
     active:scale-[0.97]
+    whitespace-nowrap
   `;
 
   const sizeStyles: Record<string, string> = {
-    xs: 'px-2.5 py-1.5 text-[0.75rem] leading-none rounded-[var(--radius-sm)]',
-    sm: 'px-3.5 py-2 text-[0.8125rem]',
-    md: 'px-4.5 py-2.5 text-[0.9375rem]',
-    lg: 'px-6 py-3.5 text-base h-12 rounded-[var(--radius-lg)]',
+    xs: 'px-2.5 py-1.5 text-[0.75rem] leading-none rounded-xl',
+    sm: 'px-3.5 py-2 text-[0.8125rem] min-h-9',
+    md: 'px-4 py-2.5 text-[0.92rem] min-h-11',
+    lg: 'px-6 py-3.5 text-base min-h-12',
   };
 
   const variantStyles: Record<string, string> = {
     primary: `
-      [background:var(--gradient-primary)] text-white
-      border-none
-      shadow-[var(--shadow-glow)]
+      bg-[linear-gradient(135deg,#4f46e5,#9333ea)] text-white
+      border border-violet-300/20
+      shadow-[0_18px_34px_-18px_rgba(139,92,246,1),inset_0_1px_0_rgba(255,255,255,0.18)]
       hover:-translate-y-[1px]
-      hover:shadow-[0_6px_20px_rgba(99,102,241,0.4)]
+      hover:shadow-[0_22px_42px_-18px_rgba(139,92,246,1),inset_0_1px_0_rgba(255,255,255,0.24)]
     `,
     secondary: `
-      bg-[var(--color-bg-surface-2)] text-[var(--color-text-base)]
-      border border-[var(--color-border)]
-      shadow-[var(--shadow-sm)]
-      hover:bg-[var(--color-bg-surface-hover)]
-      hover:border-[var(--color-border-hover)]
+      bg-white/[0.055] text-white
+      border border-white/10
+      shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]
+      hover:bg-white/[0.085]
+      hover:border-violet-300/25
     `,
     success: `
-      [background:var(--gradient-success)] text-white
-      border-none
+      bg-[linear-gradient(135deg,#059669,#10b981)] text-white
+      border border-emerald-300/20
       shadow-[0_4px_15px_rgba(16,185,129,0.25)]
       hover:-translate-y-[1px]
       hover:shadow-[0_6px_20px_rgba(16,185,129,0.35)]
     `,
     outline: `
-      border border-[var(--color-border)]
-      text-[var(--color-text-base)]
-      bg-transparent
-      hover:bg-[var(--color-bg-surface-2)]
-      hover:border-[var(--color-border-hover)]
+      border border-white/10
+      text-slate-200
+      bg-slate-950/35
+      hover:bg-white/[0.055]
+      hover:border-violet-300/25
+      hover:text-white
     `,
     ghost: `
-      text-[var(--color-text-muted)]
-      hover:text-[var(--color-text-base)]
-      hover:bg-[var(--color-bg-surface-2)]
+      text-slate-400
+      hover:text-white
+      hover:bg-white/[0.055]
     `,
     danger: `
-      [background:var(--gradient-danger)] text-white
-      border-none
+      bg-[linear-gradient(135deg,#dc2626,#ef4444)] text-white
+      border border-red-300/20
       shadow-[0_4px_15px_rgba(239,68,68,0.25)]
       hover:-translate-y-[1px]
       hover:shadow-[0_6px_20px_rgba(239,68,68,0.35)]

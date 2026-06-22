@@ -1,5 +1,8 @@
+import { Building2, Mail, MapPin, Phone, Store } from 'lucide-react';
+import { EmptyState, InfoRow, PageHeader, SectionCard, StatusBadge } from '@/components/ui/Premium';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent } from '@/components/ui/Card';
+
+export const metadata = { title: 'Configuracoes da Otica | LenteLink' };
 
 export default async function StoreSettingsPage() {
   const supabase = await createClient();
@@ -16,7 +19,13 @@ export default async function StoreSettingsPage() {
   const storeId = profile?.optical_store_id;
 
   if (!storeId) {
-    return <div>Erro: Ótica não encontrada.</div>;
+    return (
+      <EmptyState
+        icon={Store}
+        title="Otica nao encontrada"
+        description="Seu usuario ainda nao esta vinculado a uma otica ativa."
+      />
+    );
   }
 
   const { data: store } = await supabase
@@ -25,55 +34,33 @@ export default async function StoreSettingsPage() {
     .eq('id', storeId)
     .single();
 
+  const address = store?.address
+    ? `${store.address}${store.city ? `, ${store.city}` : ''}${store.state ? ` - ${store.state}` : ''}${store.zip_code ? ` · CEP ${store.zip_code}` : ''}`
+    : 'Nao informado';
+
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h2 className="text-2xl font-bold text-[var(--color-text-base)]">Configurações da Ótica</h2>
-        <p className="text-[var(--color-text-muted)]">Informações cadastrais da sua ótica.</p>
-      </div>
+    <div className="space-y-6 animate-slide-up">
+      <PageHeader
+        eyebrow="Otica"
+        title="Configuracoes da Otica"
+        description="Consulte os dados cadastrais usados pelo laboratorio para pedidos, faturamento e contato."
+      />
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-[var(--color-text-muted)]">Nome / Razão Social</p>
-              <p className="text-base text-[var(--color-text-base)]">{store?.name}</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 border-t border-[var(--color-border)] pt-4">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-muted)]">CNPJ/Documento</p>
-                <p className="text-base text-[var(--color-text-base)]">{store?.document || 'Não informado'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-muted)]">Responsável</p>
-                <p className="text-base text-[var(--color-text-base)]">{store?.responsible_name || 'Não informado'}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-t border-[var(--color-border)] pt-4">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-muted)]">Email de Contato</p>
-                <p className="text-base text-[var(--color-text-base)]">{store?.email || 'Não informado'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-muted)]">Telefone</p>
-                <p className="text-base text-[var(--color-text-base)]">{store?.phone || 'Não informado'}</p>
-              </div>
-            </div>
-
-            <div className="border-t border-[var(--color-border)] pt-4">
-              <p className="text-sm font-medium text-[var(--color-text-muted)]">Endereço Completo</p>
-              <p className="text-base text-[var(--color-text-base)]">
-                {store?.address ? `${store.address}, ${store.city || ''} - ${store.state || ''}. CEP: ${store.zip_code || ''}` : 'Não informado'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <p className="text-sm text-[var(--color-text-muted)] mt-4">
-        Para atualizar esses dados, entre em contato com o administrador do laboratório.
-      </p>
+      <SectionCard
+        icon={Building2}
+        title="Dados cadastrais"
+        description="Para atualizar estas informacoes, entre em contato com o administrador do laboratorio."
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <InfoRow label="Nome / Razao Social" value={store?.name || 'Nao informado'} />
+          <InfoRow label="CNPJ / Documento" value={store?.document || 'Nao informado'} />
+          <InfoRow label="Status" value={<StatusBadge status={store?.status || 'inactive'} />} />
+          <InfoRow label="Responsavel" value={store?.responsible_name || 'Nao informado'} />
+          <InfoRow label="Email" value={<span className="inline-flex items-center gap-2"><Mail size={15} />{store?.email || 'Nao informado'}</span>} />
+          <InfoRow label="Telefone" value={<span className="inline-flex items-center gap-2"><Phone size={15} />{store?.phone || 'Nao informado'}</span>} />
+          <InfoRow label="Endereco" value={<span className="inline-flex items-start gap-2"><MapPin size={15} className="mt-0.5 flex-shrink-0" />{address}</span>} />
+        </div>
+      </SectionCard>
     </div>
   );
 }

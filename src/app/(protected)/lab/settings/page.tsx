@@ -1,5 +1,9 @@
+import { Settings } from 'lucide-react';
+import { EmptyState, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { createClient } from '@/lib/supabase/server';
 import { LabSettingsForm } from './LabSettingsForm';
+
+export const metadata = { title: 'Configuracoes do Laboratorio | LenteLink' };
 
 export default async function LabSettingsPage() {
   const supabase = await createClient();
@@ -16,10 +20,15 @@ export default async function LabSettingsPage() {
   const labId = profile?.lab_id;
 
   if (!labId) {
-    return <div>Erro: Laboratório não encontrado.</div>;
+    return (
+      <EmptyState
+        icon={Settings}
+        title="Laboratorio nao encontrado"
+        description="Seu usuario ainda nao esta vinculado a um laboratorio ativo."
+      />
+    );
   }
 
-  // Busca configurações (se não existir, o Form lida com null)
   const { data: settings } = await supabase
     .from('lab_settings')
     .select('*')
@@ -34,13 +43,21 @@ export default async function LabSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h2 className="text-2xl font-bold text-[var(--color-text-base)]">Configurações (White-label)</h2>
-        <p className="text-[var(--color-text-muted)]">Personalize a identidade visual e as regras de negócio do seu laboratório.</p>
-      </div>
+    <div className="space-y-6 animate-slide-up">
+      <PageHeader
+        eyebrow="White-label"
+        title="Configuracoes do Laboratorio"
+        description="Ajuste identidade visual, mensagens padrao e parametros que aparecem para as oticas parceiras."
+      />
 
-      <LabSettingsForm settings={defaultSettings} />
+      <SectionCard
+        icon={Settings}
+        title="Identidade e mensagens"
+        description="As alteracoes visuais desta tela ainda seguem o fluxo MVP existente."
+        contentClassName="p-0"
+      >
+        <LabSettingsForm settings={defaultSettings} />
+      </SectionCard>
     </div>
   );
 }

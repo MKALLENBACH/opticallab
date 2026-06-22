@@ -1,7 +1,7 @@
 'use client';
 
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
-import { Badge } from '@/components/ui/Badge';
+import { RoleBadge, StatusBadge } from '@/components/ui/Premium';
 import { EntityStatus, UserRole } from '@/lib/types/enums';
 
 interface UserData {
@@ -11,41 +11,32 @@ interface UserData {
   role: UserRole;
   status: EntityStatus;
   lab?: { name: string } | null;
+  optical_store?: { name: string } | null;
   created_at: string;
 }
-
-const ROLE_LABELS: Record<string, string> = {
-  platform_admin: 'Admin Global',
-  lab_admin: 'Admin Laboratório',
-  lab_user: 'Usuário Laboratório',
-  optical_admin: 'Admin Ótica',
-  optical_user: 'Usuário Ótica',
-};
 
 export function UsersTable({ data }: { data: UserData[] }) {
   return (
     <ResponsiveDataTable
       data={data}
       keyExtractor={(row) => row.id}
+      searchPlaceholder="Buscar por usuario, email, role ou vinculo..."
+      emptyTitle="Nenhum usuario encontrado"
+      emptyMessage="Crie usuarios para administrar laboratorios, oticas e a plataforma."
       columns={[
-        { header: 'Nome', accessor: 'full_name', className: 'font-medium' },
-        { header: 'Email', accessor: 'email' },
-        { 
-          header: 'Nível de Acesso', 
-          accessor: (row) => ROLE_LABELS[row.role] || row.role
-        },
-        { 
-          header: 'Vínculo', 
-          accessor: (row) => row.lab?.name || '-'
-        },
-        { 
-          header: 'Status', 
+        {
+          header: 'Usuario',
           accessor: (row) => (
-            <Badge variant={row.status === EntityStatus.ACTIVE ? 'success' : 'default'}>
-              {row.status === EntityStatus.ACTIVE ? 'Ativo' : 'Inativo'}
-            </Badge>
-          ) 
+            <div>
+              <p className="font-bold text-white">{row.full_name}</p>
+              <p className="mt-1 text-[0.78rem] font-medium text-slate-500">{row.email}</p>
+            </div>
+          ),
         },
+        { header: 'Role', accessor: (row) => <RoleBadge role={row.role} /> },
+        { header: 'Vinculo', accessor: (row) => row.lab?.name || row.optical_store?.name || '-' },
+        { header: 'Status', accessor: (row) => <StatusBadge status={row.status} /> },
+        { header: 'Criado em', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
       ]}
     />
   );

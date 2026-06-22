@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
-import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
-import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
+import { OrdersTable, type OrderTableRow } from '@/components/orders/OrdersTable';
+import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
+import { ClipboardList, Plus } from 'lucide-react';
 
 export const metadata = { title: 'Meus Pedidos | LenteLink' };
 
@@ -21,8 +21,8 @@ export default async function StoreOrdersPage() {
 
   if (!storeId) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <p className="text-[var(--color-text-muted)]">Ótica não encontrada.</p>
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <p className="text-[var(--color-text-muted)]">Otica nao encontrada.</p>
       </div>
     );
   }
@@ -34,8 +34,8 @@ export default async function StoreOrdersPage() {
       order_number,
       status,
       priority,
-      created_at,
-      total_amount
+      desired_delivery_date,
+      created_at
     `)
     .eq('optical_store_id', storeId)
     .order('created_at', { ascending: false });
@@ -44,45 +44,25 @@ export default async function StoreOrdersPage() {
     console.error('Error fetching store orders:', error);
   }
 
-  const formatStatus = (status: string) => {
-    switch (status) {
-      case 'aguardando_confirmacao': return <Badge variant="warning" dot>Aguardando Confirmação</Badge>;
-      case 'confirmado': return <Badge variant="info" dot>Confirmado pelo Lab</Badge>;
-      case 'em_producao': return <Badge variant="info" dot>Em Produção</Badge>;
-      case 'em_entrega': return <Badge variant="default" dot>Em Entrega</Badge>;
-      case 'finalizado': return <Badge variant="success" dot>Finalizado</Badge>;
-      case 'cancelado': return <Badge variant="error" dot>Cancelado</Badge>;
-      default: return <Badge>{status}</Badge>;
-    }
-  };
+  const typedOrders = (orders || []) as OrderTableRow[];
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="page-header">
-        <h2>Meus Pedidos</h2>
-        <p>Histórico de todos os seus pedidos de lentes para o laboratório.</p>
-      </div>
+      <PageHeader
+        eyebrow="Otica"
+        title="Meus pedidos"
+        description="Acompanhe o historico e o status de cada pedido enviado ao laboratorio."
+        actions={<HeaderAction href="/store/orders/new" icon={<Plus size={17} />}>Novo pedido</HeaderAction>}
+      />
 
-      <Card className="overflow-hidden">
-        <ResponsiveDataTable
-          data={orders || []}
-          keyExtractor={(row) => row.id}
-          columns={[
-            { header: 'Nº Pedido', accessor: 'order_number', className: 'font-semibold font-mono' },
-            {
-              header: 'Prioridade',
-              accessor: (row) => (
-                <Badge variant={row.priority === 'urgente' ? 'urgent' : 'default'} dot>
-                  {row.priority === 'urgente' ? 'Urgente' : 'Normal'}
-                </Badge>
-              )
-            },
-            { header: 'Status', accessor: (row) => formatStatus(row.status) },
-            { header: 'Data do Pedido', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
-          ]}
-          emptyMessage="Você não fez nenhum pedido ainda. Use 'Buscar Lentes' para criar seu primeiro pedido."
-        />
-      </Card>
+      <SectionCard
+        icon={ClipboardList}
+        title="Historico de pedidos"
+        description="Filtre por numero, status ou prioridade para localizar rapidamente um pedido."
+        contentClassName="p-0"
+      >
+        <OrdersTable data={typedOrders} variant="store" />
+      </SectionCard>
     </div>
   );
 }

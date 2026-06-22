@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import Link from 'next/link';
+import { FormEvent, useState } from 'react';
+import { PackageSearch, Search, ShoppingCart, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Search, Package } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import { AvailabilityBadge, EmptyState, HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
+import { getTreatmentLabel } from '@/lib/constants/treatments';
 import { createClient } from '@/lib/supabase/client';
 
 interface LensTypeResult {
@@ -20,9 +23,25 @@ interface LensVariantResult {
   sku: string;
   sphere_esf: number | null;
   cylinder_cil: number | null;
+  axis: number | null;
   addition_add: number | null;
   quantity_available: number;
+  minimum_stock: number | null;
   lens_type: LensTypeResult | LensTypeResult[] | null;
+}
+
+function formatPower(value: number | null, prefix: string): string {
+  if (value === null) return '';
+  return `${prefix} ${value > 0 ? '+' : ''}${value.toFixed(2)}`;
+}
+
+function formatGrade(item: LensVariantResult): string {
+  return [
+    formatPower(item.sphere_esf, 'ESF'),
+    item.cylinder_cil !== null && item.cylinder_cil !== 0 ? formatPower(item.cylinder_cil, 'CIL') : '',
+    item.axis !== null ? `Eixo ${item.axis}` : '',
+    item.addition_add !== null ? formatPower(item.addition_add, 'ADD') : '',
+  ].filter(Boolean).join(' / ') || 'Plano';
 }
 
 export default function SearchLensPage() {
@@ -32,8 +51,8 @@ export default function SearchLensPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const supabase = createClient();
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!query.trim()) return;
 
     setIsLoading(true);
@@ -46,15 +65,18 @@ export default function SearchLensPage() {
         sku,
         sphere_esf,
         cylinder_cil,
+        axis,
         addition_add,
         quantity_available,
+        minimum_stock,
         lens_type:lens_types(name, brand, category, treatments)
       `)
-      .ilike('searchable_text', `%${query}%`)
-      .limit(20);
+      .ilike('searchable_text', `%${query.trim()}%`)
+      .limit(24);
 
     if (error) {
       console.error(error);
+      setResults([]);
     } else {
       setResults((data ?? []) as LensVariantResult[]);
     }
@@ -64,105 +86,102 @@ export default function SearchLensPage() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="page-header">
-        <h2>Busca de Lentes</h2>
-        <p>Busque por grau (ex: +2.00 -1.00), marca, tratamentos ou SKU.</p>
-      </div>
+      <PageHeader
+        eyebrow="Catalogo do laboratorio"
+        title="Busca de lentes"
+        description="Encontre SKUs por grau, marca, tratamento ou codigo e inicie o pedido com mais seguranca."
+        actions={<HeaderAction href="/store/orders/new" icon={<ShoppingCart size={17} />}>Novo pedido</HeaderAction>}
+      />
 
-      {/* Search form */}
-      <Card>
-        <CardContent className="p-5">
-          <form onSubmit={handleSearch} className="flex gap-3">
-            <div className="flex-1">
-              <Input
-                name="query"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ex: Crizal +2.00 Antirreflexo, policarbonato..."
-                leftIcon={<Search size={16} />}
-              />
-            </div>
-            <Button type="submit" variant="primary" isLoading={isLoading}>
-              {isLoading ? 'Buscando...' : 'Buscar'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <SectionCard
+        icon={PackageSearch}
+        title="Consulta rapida"
+        description="Experimente termos como +2.00, antirreflexo, policarbonato ou o SKU informado pelo laboratorio."
+      >
+        <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
+          <Input
+            name="query"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Ex: Crizal +2.00 antirreflexo"
+            leftIcon={<Search size={17} />}
+            disabled={isLoading}
+            className="flex-1"
+          />
+          <Button type="submit" size="lg" isLoading={isLoading} className="sm:min-w-[150px]">
+            Buscar
+          </Button>
+        </form>
+      </SectionCard>
 
-      {/* Results */}
       {results.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {results.map((item) => {
             const lensType = Array.isArray(item.lens_type) ? item.lens_type[0] : item.lens_type;
-            const esf = item.sphere_esf !== null ? `ESF ${item.sphere_esf > 0 ? '+' : ''}${item.sphere_esf.toFixed(2)}` : '';
-            const cil = item.cylinder_cil !== null && item.cylinder_cil !== 0 ? `CIL ${item.cylinder_cil > 0 ? '+' : ''}${item.cylinder_cil.toFixed(2)}` : '';
+            const treatments = lensType?.treatments ?? [];
 
             return (
-              <Card key={item.id} className="flex flex-col gap-3 transition-all duration-200 hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-md)]">
-                <CardContent className="p-5 flex flex-col gap-3 h-full">
-                  <div className="flex justify-between items-start gap-2">
-                    <h4 className="font-semibold text-[var(--color-text-base)] leading-tight">
-                      {lensType?.name || '—'}
-                    </h4>
-                    <Badge variant={item.quantity_available > 0 ? 'success' : 'warning'} dot>
-                      {item.quantity_available > 0 ? `${item.quantity_available} un` : 'Sob Encomenda'}
-                    </Badge>
+              <Card key={item.id} hover className="flex min-h-[300px] flex-col">
+                <CardContent className="flex h-full flex-col gap-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[1.05rem] font-extrabold text-white">
+                        {lensType?.name || 'Lente sem nome'}
+                      </p>
+                      <p className="mt-1 text-[0.86rem] font-semibold text-slate-500">
+                        {lensType?.brand || 'Sem marca'} · {lensType?.category?.replace(/_/g, ' ') || 'Categoria nao informada'}
+                      </p>
+                    </div>
+                    <AvailabilityBadge quantity={item.quantity_available} minimumStock={item.minimum_stock} />
                   </div>
 
-                  <p className="text-sm text-[var(--color-text-muted)]">
-                    {lensType?.brand || 'Sem marca'} · {lensType?.category?.replace(/_/g, ' ') || ''}
-                  </p>
-
-                  <div
-                    className="bg-[var(--color-bg-surface-2)] p-3 rounded-[var(--radius-md)] text-center
-                               font-mono text-sm border border-[var(--color-border)]
-                               text-[var(--color-text-base)]"
-                  >
-                    {[esf, cil].filter(Boolean).join(' · ') || 'Plano / Sem Grau'}
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/58 px-4 py-4 text-center font-mono text-[0.95rem] font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                    {formatGrade(item)}
                   </div>
 
-                  <p className="text-xs font-mono text-[var(--color-text-muted)]">SKU: {item.sku}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {treatments.length ? treatments.slice(0, 4).map((treatment) => (
+                      <Badge key={treatment} variant="info" size="sm">
+                        {getTreatmentLabel(treatment)}
+                      </Badge>
+                    )) : (
+                      <Badge size="sm">Sem tratamento</Badge>
+                    )}
+                  </div>
 
-                  <div className="mt-auto pt-3">
-                    <Button variant="outline" className="w-full" size="sm">
-                      Adicionar ao Pedido
-                    </Button>
+                  <div className="mt-auto flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+                    <span className="truncate font-mono text-[0.78rem] font-bold text-slate-500">
+                      SKU {item.sku}
+                    </span>
+                    <Link
+                      href={`/store/orders/new?variantId=${item.id}`}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl border border-violet-300/20 bg-violet-500/16 px-4 text-[0.82rem] font-extrabold text-violet-100 transition-all hover:border-violet-200/35 hover:bg-violet-500/24"
+                    >
+                      <ShoppingCart size={15} />
+                      Pedido
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
             );
           })}
-        </div>
+        </section>
       )}
 
-      {/* Empty state after search */}
       {hasSearched && results.length === 0 && !isLoading && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--color-bg-surface-2)' }}>
-              <Package size={22} className="text-[var(--color-text-muted)]" />
-            </div>
-            <p className="text-sm font-medium text-[var(--color-text-base)]">Nenhuma lente encontrada</p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1 max-w-xs mx-auto">
-              Tente buscar por outra combinação de grau, marca ou tratamento.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={PackageSearch}
+          title="Nenhuma lente encontrada"
+          description="Tente outra combinacao de grau, marca, tratamento ou SKU."
+        />
       )}
 
-      {/* Initial state (before any search) */}
       {!hasSearched && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--color-primary-light)' }}>
-              <Search size={20} style={{ color: 'var(--color-primary)' }} />
-            </div>
-            <p className="text-sm font-medium text-[var(--color-text-base)]">Comece sua busca</p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1 max-w-xs mx-auto">
-              Digite um termo acima para encontrar lentes disponíveis no catálogo do laboratório.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Sparkles}
+          title="Comece pela busca"
+          description="Os resultados aparecem aqui com estoque, grau, tratamentos e atalho para iniciar o pedido."
+        />
       )}
     </div>
   );

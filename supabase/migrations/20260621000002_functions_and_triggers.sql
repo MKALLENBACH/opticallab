@@ -21,8 +21,9 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT p.id, p.role, p.lab_id, p.optical_store_id, p.status
+  SELECT p.id, p.role, COALESCE(p.lab_id, os.lab_id), p.optical_store_id, p.status
   FROM profiles p
+  LEFT JOIN optical_stores os ON os.id = p.optical_store_id
   WHERE p.auth_user_id = auth.uid()
     AND p.status = 'active'
   LIMIT 1;
@@ -54,7 +55,8 @@ SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM profiles p
-    JOIN labs l ON l.id = p.lab_id
+    LEFT JOIN optical_stores os ON os.id = p.optical_store_id
+    JOIN labs l ON l.id = COALESCE(p.lab_id, os.lab_id)
     WHERE p.auth_user_id = auth.uid()
       AND p.status = 'active'
       AND l.status = 'active'
@@ -69,8 +71,9 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT p.lab_id
+  SELECT COALESCE(p.lab_id, os.lab_id)
   FROM profiles p
+  LEFT JOIN optical_stores os ON os.id = p.optical_store_id
   WHERE p.auth_user_id = auth.uid()
     AND p.status = 'active'
   LIMIT 1;

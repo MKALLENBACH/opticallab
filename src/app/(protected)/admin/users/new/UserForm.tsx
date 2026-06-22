@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { Mail, Save, ShieldCheck, UserRound } from 'lucide-react';
 import { createUserAction } from '@/actions/users';
-import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { UserRole, EntityStatus } from '@/lib/types/enums';
+import { Input } from '@/components/ui/Input';
+import { FormActions, FormSection } from '@/components/ui/Premium';
+import { EntityStatus, UserRole } from '@/lib/types/enums';
 
 interface LabOption {
   id: string;
@@ -18,22 +20,20 @@ export function UserForm({ labs }: { labs: LabOption[] }) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.LAB_ADMIN);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccess(false);
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(event.currentTarget);
     const role = formData.get('role') as UserRole;
-    
-    // Validar se lab_id é necessário e foi fornecido
     const needsLabId = role === UserRole.LAB_ADMIN || role === UserRole.LAB_USER;
     const labIdStr = formData.get('lab_id') as string;
     const lab_id = labIdStr ? labIdStr : null;
 
     if (needsLabId && !lab_id) {
-      setError('Por favor, selecione um laboratório para este perfil.');
+      setError('Selecione um laboratorio para este perfil.');
       setIsLoading(false);
       return;
     }
@@ -42,131 +42,123 @@ export function UserForm({ labs }: { labs: LabOption[] }) {
       full_name: formData.get('full_name') as string,
       email: formData.get('email') as string,
       phone: (formData.get('phone') as string) || null,
-      role: role,
+      role,
       status: formData.get('status') as EntityStatus,
-      lab_id: lab_id,
-      optical_store_id: null, // Para admin global criamos primeiro os usuários de lab, óticas via lab admin
+      lab_id,
+      optical_store_id: null,
     };
 
     const result = await createUserAction(data);
-    
+
     if (result?.error) {
       setError(result.error);
     } else if (result?.success) {
       setSuccess(true);
-      (e.target as HTMLFormElement).reset(); // Limpa o formulário
+      event.currentTarget.reset();
+      setSelectedRole(UserRole.LAB_ADMIN);
     }
-    
+
     setIsLoading(false);
   };
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {error && (
-            <div className="bg-[var(--color-error-bg)] border border-[var(--color-error)] text-[var(--color-error)] px-4 py-3 rounded-md text-sm">
+            <div className="rounded-2xl border border-red-400/25 bg-red-500/12 px-4 py-3 text-[0.9rem] font-semibold text-red-100">
               {error}
             </div>
           )}
-          
+
           {success && (
-            <div className="bg-[var(--color-success-bg)] border border-[var(--color-success)] text-[var(--color-success)] px-4 py-3 rounded-md text-sm">
-              Usuário criado com sucesso! Uma senha temporária foi enviada ou pode ser definida. (Para MVP: use <code>Mudar123@</code>)
+            <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/12 px-4 py-3 text-[0.9rem] font-semibold text-emerald-100">
+              Usuario criado com sucesso. Senha temporaria do MVP: <code className="font-mono">Mudar123@</code>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="Nome Completo *"
-              name="full_name"
-              required
-              placeholder="Ex: João da Silva"
-              disabled={isLoading}
-            />
-            <Input
-              label="Email *"
-              name="email"
-              type="email"
-              required
-              placeholder="joao@exemplo.com"
-              disabled={isLoading}
-            />
-            
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-sm font-medium text-[var(--color-text-base)]">
-                Perfil de Acesso *
-              </label>
-              <select
-                name="role"
+          <FormSection
+            icon={UserRound}
+            title="Identificacao"
+            description="Dados pessoais e canal de contato do usuario."
+          >
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <Input
+                label="Nome completo *"
+                name="full_name"
                 required
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                placeholder="Ex: Joao da Silva"
                 disabled={isLoading}
-                className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-md px-3 py-2 text-base focus:border-[var(--color-primary)] outline-none"
-              >
-                <option value={UserRole.LAB_ADMIN}>Admin Laboratório</option>
-                <option value={UserRole.LAB_USER}>Usuário Laboratório</option>
-                <option value={UserRole.PLATFORM_ADMIN}>Admin Global (Perigoso)</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-sm font-medium text-[var(--color-text-base)]">
-                Status
-              </label>
-              <select
-                name="status"
-                defaultValue={EntityStatus.ACTIVE}
+              />
+              <Input
+                label="Email *"
+                name="email"
+                type="email"
+                required
+                placeholder="usuario@exemplo.com"
+                leftIcon={<Mail size={16} />}
                 disabled={isLoading}
-                className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-md px-3 py-2 text-base focus:border-[var(--color-primary)] outline-none"
-              >
-                <option value={EntityStatus.ACTIVE}>Ativo</option>
-                <option value={EntityStatus.INACTIVE}>Inativo</option>
-              </select>
+              />
+              <Input
+                label="Telefone"
+                name="phone"
+                placeholder="(00) 00000-0000"
+                disabled={isLoading}
+              />
             </div>
+          </FormSection>
 
-            {/* Renderizar seleção de Lab apenas se aplicável */}
-            {(selectedRole === UserRole.LAB_ADMIN || selectedRole === UserRole.LAB_USER) && (
-              <div className="flex flex-col gap-1 w-full">
-                <label className="text-sm font-medium text-[var(--color-text-base)]">
-                  Laboratório Vinculado *
-                </label>
+          <FormSection
+            icon={ShieldCheck}
+            title="Acesso e vinculo"
+            description="Defina role, status e o laboratorio responsavel quando aplicavel."
+          >
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Perfil de acesso *</label>
                 <select
-                  name="lab_id"
+                  name="role"
                   required
+                  value={selectedRole}
+                  onChange={(event) => setSelectedRole(event.target.value as UserRole)}
                   disabled={isLoading}
-                  className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-md px-3 py-2 text-base focus:border-[var(--color-primary)] outline-none"
                 >
-                  <option value="">Selecione um laboratório...</option>
-                  {labs.map(lab => (
-                    <option key={lab.id} value={lab.id}>{lab.name}</option>
-                  ))}
+                  <option value={UserRole.LAB_ADMIN}>Admin Laboratorio</option>
+                  <option value={UserRole.LAB_USER}>Usuario Laboratorio</option>
+                  <option value={UserRole.PLATFORM_ADMIN}>Admin Global</option>
                 </select>
               </div>
-            )}
-            
-            <Input
-              label="Telefone (Opcional)"
-              name="phone"
-              placeholder="(00) 00000-0000"
-              disabled={isLoading}
-            />
-          </div>
 
-          <div className="flex justify-end gap-3 mt-4 border-t border-[var(--color-border)] pt-4">
-             <Button 
-              type="button" 
-              variant="outline" 
-              disabled={isLoading}
-              onClick={() => window.history.back()}
-            >
+              <div className="flex flex-col gap-2">
+                <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Status</label>
+                <select name="status" defaultValue={EntityStatus.ACTIVE} disabled={isLoading}>
+                  <option value={EntityStatus.ACTIVE}>Ativo</option>
+                  <option value={EntityStatus.INACTIVE}>Inativo</option>
+                </select>
+              </div>
+
+              {(selectedRole === UserRole.LAB_ADMIN || selectedRole === UserRole.LAB_USER) && (
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Laboratorio vinculado *</label>
+                  <select name="lab_id" required disabled={isLoading}>
+                    <option value="">Selecione um laboratorio...</option>
+                    {labs.map((lab) => (
+                      <option key={lab.id} value={lab.id}>{lab.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </FormSection>
+
+          <FormActions>
+            <Button type="button" variant="outline" disabled={isLoading} onClick={() => window.history.back()}>
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" isLoading={isLoading}>
-              Criar Usuário
+            <Button type="submit" isLoading={isLoading} rightIcon={<Save size={17} />}>
+              Criar usuario
             </Button>
-          </div>
+          </FormActions>
         </form>
       </CardContent>
     </Card>

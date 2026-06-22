@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/Premium';
 import { LensVariantForm } from './LensVariantForm';
 
 export default async function NewLensVariantPage() {
@@ -18,10 +17,9 @@ export default async function NewLensVariantPage() {
   const labId = profile?.lab_id;
 
   if (!labId) {
-    return <div>Erro: Laboratório não encontrado.</div>;
+    return <div>Erro: Laboratorio nao encontrado.</div>;
   }
 
-  // Busca os tipos de lente do catálogo do laboratório
   const { data: lensTypes } = await supabase
     .from('lens_types')
     .select('id, name, brand')
@@ -30,19 +28,13 @@ export default async function NewLensVariantPage() {
     .order('name');
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Link 
-          href="/lab/stock" 
-          className="p-2 rounded-full hover:bg-[var(--color-bg-surface-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold text-[var(--color-text-base)]">Nova Variante (Estoque)</h2>
-          <p className="text-[var(--color-text-muted)]">Adicione uma variante específica (SKU/Grau) vinculada a uma Lente Base.</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader
+        backHref="/lab/stock"
+        eyebrow="Estoque"
+        title="Novo SKU"
+        description="Crie uma variante tecnica com SKU, grau, prazos e disponibilidade de estoque."
+      />
 
       <LensVariantForm lensTypes={lensTypes || []} />
     </div>

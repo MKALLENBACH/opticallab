@@ -9,13 +9,14 @@ export function Card({ children, className = '', hover = false, ...props }: Card
   return (
     <div
       className={`
-        bg-[var(--color-bg-surface)]
-        border border-[var(--color-border)]
-        rounded-[var(--radius-xl)]
-        shadow-[var(--shadow-card)]
+        bg-slate-950/52
+        border border-white/10
+        rounded-3xl
+        shadow-[0_24px_70px_-46px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.055)]
+        backdrop-blur-xl
         overflow-hidden
         transition-all duration-300
-        ${hover ? 'hover:shadow-[var(--shadow-xl)] hover:-translate-y-[2px] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-surface-hover)] cursor-pointer' : ''}
+        ${hover ? 'hover:shadow-[0_26px_70px_-40px_rgba(99,102,241,0.55)] hover:-translate-y-[2px] hover:border-violet-300/30 hover:bg-slate-950/68 cursor-pointer' : ''}
         ${className}
       `}
       {...props}
@@ -28,7 +29,7 @@ export function Card({ children, className = '', hover = false, ...props }: Card
 export function CardHeader({ children, className = '', ...props }: CardProps) {
   return (
     <div
-      className={`px-6 py-5 border-b border-[var(--color-border)] ${className}`}
+      className={`border-b border-white/10 px-5 py-5 sm:px-6 ${className}`}
       {...props}
     >
       {children}
@@ -60,7 +61,7 @@ export function CardDescription({ children, className = '', ...props }: CardProp
 
 export function CardContent({ children, className = '', ...props }: CardProps) {
   return (
-    <div className={`p-6 ${className}`} {...props}>
+    <div className={`p-5 sm:p-6 ${className}`} {...props}>
       {children}
     </div>
   );
@@ -69,11 +70,10 @@ export function CardContent({ children, className = '', ...props }: CardProps) {
 export function CardFooter({ children, className = '', ...props }: CardProps) {
   return (
     <div
-      className={`px-6 py-4 bg-[var(--color-bg-surface-2)] border-t border-[var(--color-border)] ${className}`}
+      className={`border-t border-white/10 bg-white/[0.025] px-5 py-4 sm:px-6 ${className}`}
       {...props}
     >
       {children}
     </div>
   );
 }
-

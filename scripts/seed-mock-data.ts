@@ -27,6 +27,15 @@ type LensTypeSeedRow = {
   name: string;
 };
 
+type LensVariantSeedRow = {
+  id: string;
+  lens_type_id: string;
+  sku: string;
+  sphere_esf: number | null;
+  cylinder_cil: number | null;
+  addition_add: number | null;
+};
+
 async function seed() {
   console.log("🚀 Iniciando geração de dados de teste...");
 
@@ -76,14 +85,16 @@ async function seed() {
 
     // 4. Criar Profile do Lab Admin
     console.log("📝 Criando perfil para o Lab Admin...");
-    await supabase.from('profiles').insert({
+    const { data: labProfile, error: labProfileError } = await supabase.from('profiles').insert({
       auth_user_id: labAuth.user.id,
       full_name: 'Admin do LenteLab',
       email: LAB_EMAIL,
       role: 'lab_admin',
       lab_id: labId,
       status: 'active'
-    });
+    }).select('id').single();
+
+    if (labProfileError) throw new Error("Erro ao criar perfil Lab Admin: " + labProfileError.message);
 
     // 5. Criar Usuário Store Admin no Auth
     console.log("👤 Criando usuário Auth para o Store Admin...");
@@ -98,14 +109,17 @@ async function seed() {
 
     // 6. Criar Profile do Store Admin
     console.log("📝 Criando perfil para o Store Admin...");
-    await supabase.from('profiles').insert({
+    const { data: storeProfile, error: storeProfileError } = await supabase.from('profiles').insert({
       auth_user_id: storeAuth.user.id,
       full_name: 'Admin da Ótica Visão Lente',
       email: STORE_EMAIL,
       role: 'optical_admin',
+      lab_id: labId,
       optical_store_id: storeId,
       status: 'active'
-    });
+    }).select('id').single();
+
+    if (storeProfileError) throw new Error("Erro ao criar perfil Store Admin: " + storeProfileError.message);
 
     // 7. Criar Produtos (Lens Types)
     console.log("👓 Criando catálogo de lentes...");
@@ -145,23 +159,26 @@ async function seed() {
     const vsId = typedLensTypes.find((lens) => lens.name.includes('Visão Simples'))?.id;
     const mfId = typedLensTypes.find((lens) => lens.name.includes('Multifocal'))?.id;
 
-    await supabase.from('lens_variants').insert([
+    const { data: variants, error: variantsError } = await supabase.from('lens_variants').insert([
       { lab_id: labId, lens_type_id: vsId, sku: 'LL-VS-AR-001', sphere_esf: -2.00, cylinder_cil: 0, quantity_available: 50 },
       { lab_id: labId, lens_type_id: vsId, sku: 'LL-VS-AR-002', sphere_esf: -2.25, cylinder_cil: -0.50, quantity_available: 20 },
       { lab_id: labId, lens_type_id: mfId, sku: 'LL-MF-DIG-001', sphere_esf: 1.00, cylinder_cil: 0, quantity_available: 15 },
       { lab_id: labId, lens_type_id: mfId, sku: 'LL-MF-DIG-002', sphere_esf: 1.50, cylinder_cil: -1.00, quantity_available: 0 } // Sem estoque para teste
-    ]);
+    ]).select('id, lens_type_id, sku, sphere_esf, cylinder_cil, addition_add');
+
+    if (variantsError) throw new Error("Erro ao criar variantes: " + variantsError.message);
+    const typedVariants = (variants ?? []) as LensVariantSeedRow[];
 
     // 9. Criar alguns Pedidos de Exemplo
     console.log("📋 Criando pedidos de exemplo...");
-    await supabase.from('orders').insert([
+    const { data: orders, error: ordersError } = await supabase.from('orders').insert([
       {
         lab_id: labId,
         optical_store_id: storeId,
         order_number: 'PED-' + Math.floor(100000 + Math.random() * 900000),
         status: 'aguardando_confirmacao',
         priority: 'normal',
-        patient_name: 'Maria da Silva',
+        requested_by_profile_id: storeProfile.id,
         notes: 'Pedido de teste gerado automaticamente.'
       },
       {
@@ -170,10 +187,53 @@ async function seed() {
         order_number: 'PED-' + Math.floor(100000 + Math.random() * 900000),
         status: 'em_producao',
         priority: 'urgente',
-        patient_name: 'José Carlos',
+        requested_by_profile_id: storeProfile.id,
+        confirmed_by_profile_id: labProfile.id,
+        confirmed_at: new Date().toISOString(),
         notes: 'Cliente precisa com urgência.'
       }
-    ]);
+    ]).select('id, status');
+
+    if (ordersError) throw new Error("Erro ao criar pedidos: " + ordersError.message);
+
+    const firstVariant = typedVariants[0];
+    const secondVariant = typedVariants[2] ?? typedVariants[1];
+
+    if (orders?.length && firstVariant && secondVariant) {
+      await supabase.from('order_items').insert([
+        {
+          order_id: orders[0].id,
+          lab_id: labId,
+          lens_type_id: firstVariant.lens_type_id,
+          lens_variant_id: firstVariant.id,
+          quantity: 1,
+          sphere_esf: firstVariant.sphere_esf,
+          cylinder_cil: firstVariant.cylinder_cil,
+          addition_add: firstVariant.addition_add,
+          item_notes: 'Item de teste gerado pelo seed.'
+        },
+        {
+          order_id: orders[1].id,
+          lab_id: labId,
+          lens_type_id: secondVariant.lens_type_id,
+          lens_variant_id: secondVariant.id,
+          quantity: 1,
+          sphere_esf: secondVariant.sphere_esf,
+          cylinder_cil: secondVariant.cylinder_cil,
+          addition_add: secondVariant.addition_add,
+          item_notes: 'Item urgente de teste.'
+        }
+      ]);
+
+      await supabase.from('order_status_history').insert(orders.map((order) => ({
+        order_id: order.id,
+        lab_id: labId,
+        old_status: null,
+        new_status: order.status,
+        changed_by_profile_id: order.status === 'aguardando_confirmacao' ? storeProfile.id : labProfile.id,
+        notes: 'Status inicial gerado pelo seed.'
+      })));
+    }
 
     console.log("\n✅ Dados de teste gerados com sucesso!\n");
     console.log("=========================================");

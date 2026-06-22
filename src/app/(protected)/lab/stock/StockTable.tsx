@@ -2,22 +2,40 @@
 
 import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 import { Badge } from '@/components/ui/Badge';
+import { AvailabilityBadge, StatusBadge } from '@/components/ui/Premium';
+import { getTreatmentLabel } from '@/lib/constants/treatments';
 
 interface StockData {
   id: string;
   sku: string;
-  lens_type: { name: string } | null;
+  lens_type: {
+    name: string;
+    brand: string | null;
+    material: string | null;
+    treatments: string[] | null;
+  } | null;
   sphere_esf: number | null;
   cylinder_cil: number | null;
+  axis: number | null;
   addition_add: number | null;
   quantity_available: number;
+  minimum_stock: number | null;
+  delivery_time_in_stock_days: number | null;
+  production_time_out_of_stock_days: number | null;
+  status: string;
 }
 
-function formatGrau(sphere: number | null, cyl: number | null, add: number | null): string {
-  const esf = sphere !== null ? `ESF ${sphere > 0 ? '+' : ''}${sphere.toFixed(2)}` : '';
-  const cil = cyl !== null && cyl !== 0 ? `CIL ${cyl > 0 ? '+' : ''}${cyl.toFixed(2)}` : '';
-  const addition = add !== null ? `ADD +${add.toFixed(2)}` : '';
-  return [esf, cil, addition].filter(Boolean).join(' / ') || 'Plano';
+function formatPower(value: number | null, prefix: string, sign = true): string {
+  if (value === null) return '';
+  return `${prefix} ${sign && value > 0 ? '+' : ''}${value.toFixed(2)}`;
+}
+
+function formatGrade(row: StockData): string {
+  const esf = formatPower(row.sphere_esf, 'ESF');
+  const cil = row.cylinder_cil !== null && row.cylinder_cil !== 0 ? formatPower(row.cylinder_cil, 'CIL') : '';
+  const axis = row.axis !== null ? `Eixo ${row.axis}` : '';
+  const add = row.addition_add !== null ? formatPower(row.addition_add, 'ADD') : '';
+  return [esf, cil, axis, add].filter(Boolean).join(' / ') || 'Plano';
 }
 
 export function StockTable({ data }: { data: StockData[] }) {
@@ -25,29 +43,55 @@ export function StockTable({ data }: { data: StockData[] }) {
     <ResponsiveDataTable
       data={data}
       keyExtractor={(row) => row.id}
+      searchPlaceholder="Buscar por SKU, lente, material ou grau..."
+      emptyTitle="Nenhum SKU cadastrado"
+      emptyMessage="Cadastre variantes de estoque para liberar pedidos mais rapidos para as oticas."
       columns={[
-        { header: 'SKU', accessor: 'sku', className: 'font-mono text-sm font-semibold' },
-        { header: 'Lente Base', accessor: (row) => row.lens_type?.name || '—' },
+        { header: 'SKU', accessor: 'sku', className: 'font-mono font-extrabold text-white' },
+        {
+          header: 'Lente',
+          accessor: (row) => (
+            <div>
+              <p className="font-bold text-white">{row.lens_type?.name || '-'}</p>
+              <p className="mt-1 text-[0.78rem] font-medium text-slate-500">{row.lens_type?.brand || 'Sem marca'} - {row.lens_type?.material || 'Material nao informado'}</p>
+            </div>
+          ),
+        },
         {
           header: 'Grau',
+          accessor: (row) => <span className="font-mono text-[0.84rem] font-bold text-slate-100">{formatGrade(row)}</span>,
+        },
+        {
+          header: 'Tratamento',
           accessor: (row) => (
-            <span className="font-mono text-sm">
-              {formatGrau(row.sphere_esf, row.cylinder_cil, row.addition_add)}
-            </span>
-          )
+            <div className="flex max-w-xs flex-wrap gap-1.5">
+              {row.lens_type?.treatments?.length ? row.lens_type.treatments.slice(0, 2).map((treatment) => (
+                <Badge key={treatment} variant="info" size="sm">{getTreatmentLabel(treatment)}</Badge>
+              )) : <span className="text-slate-500">-</span>}
+            </div>
+          ),
         },
         {
           header: 'Estoque',
           accessor: (row) => (
-            <Badge variant={row.quantity_available > 0 ? 'success' : 'error'} dot>
-              {row.quantity_available > 0 ? `${row.quantity_available} un` : 'Zerado'}
-            </Badge>
+            <div className="flex flex-col items-end gap-1.5">
+              <span className="font-mono text-[1rem] font-extrabold text-white">{row.quantity_available} un</span>
+              <AvailabilityBadge quantity={row.quantity_available} minimumStock={row.minimum_stock} />
+            </div>
           ),
           align: 'right',
         },
+        {
+          header: 'Prazo',
+          accessor: (row) => `${row.delivery_time_in_stock_days ?? '-'}d / ${row.production_time_out_of_stock_days ?? '-'}d`,
+          align: 'right',
+        },
+        {
+          header: 'Status',
+          accessor: (row) => <StatusBadge status={row.status} />,
+          align: 'right',
+        },
       ]}
-      emptyMessage="Nenhum SKU cadastrado. Clique em 'Nova Variante' para adicionar itens ao estoque."
     />
   );
 }
-

@@ -1,22 +1,15 @@
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/Premium';
 import { OpticalStoreForm } from './OpticalStoreForm';
 
 export default function NewOpticalStorePage() {
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Link 
-          href="/lab/optical-stores" 
-          className="p-2 rounded-full hover:bg-[var(--color-bg-surface-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold text-[var(--color-text-base)]">Nova Ótica</h2>
-          <p className="text-[var(--color-text-muted)]">Cadastre uma nova ótica parceira para o seu laboratório.</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader
+        backHref="/lab/optical-stores"
+        eyebrow="Nova parceira"
+        title="Cadastrar otica"
+        description="Organize dados comerciais, contato e endereco da otica parceira em uma ficha unica."
+      />
 
       <OpticalStoreForm />
     </div>

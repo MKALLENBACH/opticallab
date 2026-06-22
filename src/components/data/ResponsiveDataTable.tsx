@@ -1,10 +1,14 @@
-import React from 'react';
+'use client';
+
+import React, { useMemo, useState } from 'react';
+import { Search, Table2 } from 'lucide-react';
 
 interface Column<T> {
   header: string;
   accessor: keyof T | ((row: T) => React.ReactNode);
   className?: string;
   align?: 'left' | 'center' | 'right';
+  hideOnMobile?: boolean;
 }
 
 interface ResponsiveDataTableProps<T> {
@@ -13,7 +17,19 @@ interface ResponsiveDataTableProps<T> {
   keyExtractor: (row: T) => string;
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
+  emptyTitle?: string;
   emptyIcon?: React.ReactNode;
+  searchPlaceholder?: string;
+  showSearch?: boolean;
+  summaryLabel?: string;
+}
+
+function rowSearchText<T>(row: T): string {
+  try {
+    return JSON.stringify(row).toLowerCase();
+  } catch {
+    return '';
+  }
 }
 
 export function ResponsiveDataTable<T>({
@@ -22,29 +38,19 @@ export function ResponsiveDataTable<T>({
   keyExtractor,
   onRowClick,
   emptyMessage = 'Nenhum registro encontrado.',
+  emptyTitle = 'Nenhum resultado',
   emptyIcon,
+  searchPlaceholder = 'Buscar nesta lista...',
+  showSearch = true,
+  summaryLabel,
 }: ResponsiveDataTableProps<T>) {
+  const [query, setQuery] = useState('');
 
-  if (!data || data.length === 0) {
-    return (
-      <div className="w-full py-16 flex flex-col items-center justify-center text-center gap-3">
-        {emptyIcon ?? (
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ background: 'var(--color-bg-surface-2)' }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
-              fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5"
-              strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-            </svg>
-          </div>
-        )}
-        <p className="text-sm font-medium text-[var(--color-text-base)]">Nenhum resultado</p>
-        <p className="text-[0.8125rem] text-[var(--color-text-muted)] max-w-xs">{emptyMessage}</p>
-      </div>
-    );
-  }
+  const filteredData = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return data || [];
+    return (data || []).filter((row) => rowSearchText(row).includes(normalized));
+  }, [data, query]);
 
   const alignClass = {
     left: 'text-left',
@@ -52,57 +58,128 @@ export function ResponsiveDataTable<T>({
     right: 'text-right',
   };
 
+  const renderCell = (row: T, col: Column<T>) => (
+    typeof col.accessor === 'function'
+      ? col.accessor(row)
+      : String(row[col.accessor] ?? '-')
+  );
+
+  const hasData = Boolean(data?.length);
+  const hasFilteredData = Boolean(filteredData.length);
+
   return (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full text-left border-collapse">
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-surface-2)' }}>
-            {columns.map((col, index) => (
-              <th
-                key={index}
+    <div className="w-full">
+      {showSearch && hasData && (
+        <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.018] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="relative w-full sm:max-w-sm">
+            <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchPlaceholder}
+              className="min-h-11 rounded-2xl border border-white/10 bg-slate-950/62 py-2.5 pl-10 pr-3 text-[0.9rem] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition-all placeholder:text-slate-500 hover:border-white/20 focus:border-violet-300/50 focus:ring-2 focus:ring-violet-400/15"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-[0.78rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+            <Table2 size={15} />
+            {summaryLabel || `${filteredData.length} de ${data.length} registros`}
+          </div>
+        </div>
+      )}
+
+      {!hasData || !hasFilteredData ? (
+        <div className="flex w-full flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+          {emptyIcon ?? (
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-violet-500/10 text-violet-200 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
+              <Table2 size={24} />
+            </div>
+          )}
+          <p className="text-[1rem] font-extrabold text-white">
+            {!hasData ? emptyTitle : 'Nada encontrado'}
+          </p>
+          <p className="max-w-sm text-[0.88rem] font-medium text-slate-400">
+            {!hasData ? emptyMessage : 'Tente ajustar a busca para encontrar o registro desejado.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="hidden w-full overflow-x-auto md:block">
+            <table className="w-full min-w-[720px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.025]">
+                  {columns.map((col, index) => (
+                    <th
+                      key={`${col.header}-${index}`}
+                      className={`
+                        px-5 py-4 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]
+                        text-slate-500
+                        ${alignClass[col.align ?? 'left']}
+                        ${col.className || ''}
+                      `}
+                    >
+                      {col.header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((row) => (
+                  <tr
+                    key={keyExtractor(row)}
+                    onClick={() => onRowClick?.(row)}
+                    className={`
+                      border-b border-white/[0.065] transition-colors duration-150 last:border-0
+                      ${onRowClick ? 'cursor-pointer hover:bg-violet-500/[0.055]' : 'hover:bg-white/[0.025]'}
+                    `}
+                  >
+                    {columns.map((col, index) => (
+                      <td
+                        key={`${col.header}-${index}`}
+                        className={`
+                          px-5 py-4 text-[0.9rem] font-medium text-slate-200
+                          ${alignClass[col.align ?? 'left']}
+                          ${col.className || ''}
+                        `}
+                      >
+                        {renderCell(row, col)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 p-4 md:hidden">
+            {filteredData.map((row) => (
+              <button
+                key={keyExtractor(row)}
+                type="button"
+                onClick={() => onRowClick?.(row)}
                 className={`
-                  px-5 py-3 text-[0.7rem] font-semibold uppercase tracking-widest
-                  text-[var(--color-text-muted)]
-                  ${alignClass[col.align ?? 'left']}
-                  ${col.className || ''}
+                  w-full rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-left
+                  shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all
+                  ${onRowClick ? 'hover:border-violet-300/25 hover:bg-white/[0.055]' : 'cursor-default'}
                 `}
               >
-                {col.header}
-              </th>
+                <div className="flex flex-col gap-3">
+                  {columns.filter((col) => !col.hideOnMobile).map((col, index) => (
+                    <div key={`${col.header}-${index}`} className="flex items-start justify-between gap-4">
+                      <span className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-slate-500">
+                        {col.header}
+                      </span>
+                      <div className="min-w-0 text-right text-[0.88rem] font-semibold text-slate-100">
+                        {renderCell(row, col)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </button>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr
-              key={keyExtractor(row)}
-              onClick={() => onRowClick?.(row)}
-              style={{ borderBottom: '1px solid var(--color-border)' }}
-              className={`
-                transition-colors duration-100 last:border-0
-                ${onRowClick
-                  ? 'cursor-pointer hover:bg-[var(--color-bg-surface-2)]'
-                  : 'hover:bg-[var(--color-bg-surface-2)/50]'}
-              `}
-            >
-              {columns.map((col, index) => (
-                <td
-                  key={index}
-                  className={`
-                    px-5 py-3.5 text-[0.875rem] text-[var(--color-text-base)]
-                    ${alignClass[col.align ?? 'left']}
-                    ${col.className || ''}
-                  `}
-                >
-                  {typeof col.accessor === 'function'
-                    ? col.accessor(row)
-                    : String(row[col.accessor] ?? '—')}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
-import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
-import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
+import { OrdersTable, type OrderTableRow } from '@/components/orders/OrdersTable';
+import { PageHeader, SectionCard } from '@/components/ui/Premium';
+import { ClipboardList } from 'lucide-react';
 
 export const metadata = { title: 'Pedidos | LenteLink' };
 
@@ -21,8 +21,8 @@ export default async function LabOrdersPage() {
 
   if (!labId) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <p className="text-[var(--color-text-muted)]">Laboratório não encontrado.</p>
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <p className="text-[var(--color-text-muted)]">Laboratorio nao encontrado.</p>
       </div>
     );
   }
@@ -34,6 +34,7 @@ export default async function LabOrdersPage() {
       order_number,
       status,
       priority,
+      desired_delivery_date,
       created_at,
       optical_store:optical_stores(name)
     `)
@@ -44,51 +45,27 @@ export default async function LabOrdersPage() {
     console.error('Error fetching orders:', error);
   }
 
-  const typedOrders = (orders || []).map(order => ({
+  const typedOrders = (orders || []).map((order) => ({
     ...order,
-    optical_store: Array.isArray(order.optical_store) ? order.optical_store[0] : order.optical_store
-  }));
-
-  const formatStatus = (status: string) => {
-    switch (status) {
-      case 'aguardando_confirmacao': return <Badge variant="warning" dot>Aguardando Confirmação</Badge>;
-      case 'confirmado': return <Badge variant="info" dot>Confirmado</Badge>;
-      case 'em_producao': return <Badge variant="info" dot>Em Produção</Badge>;
-      case 'em_entrega': return <Badge variant="default" dot>Em Entrega</Badge>;
-      case 'finalizado': return <Badge variant="success" dot>Finalizado</Badge>;
-      case 'cancelado': return <Badge variant="error" dot>Cancelado</Badge>;
-      default: return <Badge>{status}</Badge>;
-    }
-  };
+    optical_store: Array.isArray(order.optical_store) ? order.optical_store[0] : order.optical_store,
+  })) as OrderTableRow[];
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="page-header">
-        <h2>Gerenciamento de Pedidos</h2>
-        <p>Acompanhe todos os pedidos recebidos das óticas parceiras.</p>
-      </div>
+      <PageHeader
+        eyebrow="Fila do laboratorio"
+        title="Pedidos recebidos"
+        description="Acompanhe pedidos das oticas parceiras, priorize urgencias e avance o status operacional."
+      />
 
-      <Card className="overflow-hidden">
-        <ResponsiveDataTable
-          data={typedOrders}
-          keyExtractor={(row) => row.id}
-          columns={[
-            { header: 'Nº Pedido', accessor: 'order_number', className: 'font-semibold font-mono' },
-            { header: 'Ótica', accessor: (row) => row.optical_store?.name || '—' },
-            {
-              header: 'Prioridade',
-              accessor: (row) => (
-                <Badge variant={row.priority === 'urgente' ? 'urgent' : 'default'} dot>
-                  {row.priority === 'urgente' ? 'Urgente' : 'Normal'}
-                </Badge>
-              )
-            },
-            { header: 'Status', accessor: (row) => formatStatus(row.status) },
-            { header: 'Data', accessor: (row) => new Date(row.created_at).toLocaleDateString('pt-BR'), align: 'right' },
-          ]}
-          emptyMessage="Nenhum pedido recebido ainda. Quando uma ótica fizer um pedido, ele aparecerá aqui."
-        />
-      </Card>
+      <SectionCard
+        icon={ClipboardList}
+        title="Fila operacional"
+        description="Use a busca para filtrar por numero, otica, status ou prioridade."
+        contentClassName="p-0"
+      >
+        <OrdersTable data={typedOrders} variant="lab" />
+      </SectionCard>
     </div>
   );
 }

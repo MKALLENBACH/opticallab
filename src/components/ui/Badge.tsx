@@ -16,12 +16,12 @@ export function Badge({
   ...props
 }: BadgeProps) {
   const variantStyles: Record<string, string> = {
-    default: 'bg-[var(--color-bg-surface-2)] text-[var(--color-text-muted)] border-[var(--color-border)]',
-    success: 'bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[var(--color-success-border)] shadow-[0_0_10px_rgba(16,185,129,0.1)]',
-    warning: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-border)] shadow-[0_0_10px_rgba(245,158,11,0.1)]',
-    error:   'bg-[var(--color-error-bg)] text-[var(--color-error-text)] border-[var(--color-error-border)] shadow-[0_0_10px_rgba(239,68,68,0.1)]',
-    info:    'bg-[var(--color-info-bg)] text-[var(--color-info-text)] border-[var(--color-info-border)] shadow-[0_0_10px_rgba(59,130,246,0.1)]',
-    urgent:  'bg-[var(--color-urgent-bg)] text-[var(--color-urgent-text)] border-[var(--color-urgent-border)] shadow-[0_0_10px_rgba(225,29,72,0.1)]',
+    default: 'bg-white/[0.045] text-slate-300 border-white/10',
+    success: 'bg-emerald-500/12 text-emerald-200 border-emerald-400/25 shadow-[0_0_14px_rgba(16,185,129,0.12)]',
+    warning: 'bg-amber-500/13 text-amber-200 border-amber-400/25 shadow-[0_0_14px_rgba(245,158,11,0.12)]',
+    error:   'bg-red-500/13 text-red-200 border-red-400/25 shadow-[0_0_14px_rgba(239,68,68,0.12)]',
+    info:    'bg-blue-500/13 text-blue-200 border-blue-400/25 shadow-[0_0_14px_rgba(59,130,246,0.12)]',
+    urgent:  'bg-rose-500/14 text-rose-200 border-rose-400/25 shadow-[0_0_14px_rgba(225,29,72,0.14)]',
   };
 
   const dotColors: Record<string, string> = {
@@ -34,15 +34,15 @@ export function Badge({
   };
 
   const sizeStyles: Record<string, string> = {
-    sm: 'px-2 py-0.5 text-[0.6875rem] gap-1',
-    md: 'px-2.5 py-1 text-xs gap-1.5',
+    sm: 'px-2 py-1 text-[0.68rem] gap-1',
+    md: 'px-2.5 py-1.5 text-[0.74rem] gap-1.5',
   };
 
   return (
     <span
       className={`
-        inline-flex items-center font-semibold rounded-full border
-        tracking-wide leading-none
+        inline-flex items-center rounded-full border
+        font-bold uppercase tracking-[0.08em] leading-none
         ${sizeStyles[size]}
         ${variantStyles[variant]}
         ${className}
