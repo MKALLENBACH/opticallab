@@ -6,7 +6,6 @@ import { AppSidebar } from './AppSidebar';
 import { AppTopbar } from './AppTopbar';
 import { UserRole } from '@/lib/types/enums';
 import { X } from 'lucide-react';
-import { Glasses } from 'lucide-react';
 
 interface ClientLayoutWrapperProps {
   children: React.ReactNode;
@@ -27,16 +26,20 @@ export function ClientLayoutWrapper({
 }: ClientLayoutWrapperProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const sidebar = (
+    <AppSidebar
+      role={role}
+      labLogoUrl={labLogoUrl}
+      labName={labName}
+      userName={userName}
+      userEmail={userEmail}
+    />
+  );
+
   return (
     <>
       <AppShell
-        sidebar={
-          <AppSidebar
-            role={role}
-            labLogoUrl={labLogoUrl}
-            labName={labName}
-          />
-        }
+        sidebar={sidebar}
         topbar={
           <AppTopbar
             userName={userName}
@@ -49,37 +52,32 @@ export function ClientLayoutWrapper({
         {children}
       </AppShell>
 
-      {/* ── Mobile Sidebar Drawer ── */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
-          {/* Drawer panel */}
           <div
-            className="relative flex w-72 max-w-[85vw] flex-col shadow-2xl animate-slide-left"
-            style={{ background: 'var(--sidebar-bg)' }}
+            className="relative flex w-[280px] max-w-[88vw] flex-col border-r border-white/10 shadow-2xl animate-slide-left"
+            style={{ background: 'rgba(2, 6, 23, 0.96)' }}
           >
-            {/* Close button */}
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="absolute top-4 right-4 z-10 p-1.5 rounded-full
-                         text-white/50 hover:text-white hover:bg-white/10
-                         transition-colors"
+              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
               aria-label="Fechar menu"
             >
               <X size={18} />
             </button>
 
-            {/* Sidebar reused */}
             <div className="flex-1 overflow-y-auto">
               <AppSidebar
                 role={role}
                 labLogoUrl={labLogoUrl}
                 labName={labName}
+                userName={userName}
+                userEmail={userEmail}
                 onNavClick={() => setIsMobileMenuOpen(false)}
               />
             </div>

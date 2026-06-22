@@ -4,6 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+type LensTypeSeedRow = {
+  id: string;
+  name: string;
+};
+
 export async function GET() {
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json(
@@ -128,8 +133,9 @@ export async function GET() {
     if (lensError) throw new Error("Erro ao criar Lens Types: " + lensError.message);
 
     // 8. Criar Estoque (Lens Variants)
-    const vsId = lensTypes.find((l: any) => l.name.includes('Visão Simples'))?.id;
-    const mfId = lensTypes.find((l: any) => l.name.includes('Multifocal'))?.id;
+    const typedLensTypes = (lensTypes ?? []) as LensTypeSeedRow[];
+    const vsId = typedLensTypes.find((lens) => lens.name.includes('Visão Simples'))?.id;
+    const mfId = typedLensTypes.find((lens) => lens.name.includes('Multifocal'))?.id;
 
     if (vsId && mfId) {
       await supabase.from('lens_variants').insert([
@@ -177,9 +183,11 @@ export async function GET() {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro desconhecido ao gerar seed.";
+
     return NextResponse.json(
-      { error: error.message || "Erro desconhecido ao gerar seed." },
+      { error: message },
       { status: 500 }
     );
   }

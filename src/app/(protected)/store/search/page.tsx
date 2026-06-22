@@ -8,9 +8,26 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Search, Package } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
+interface LensTypeResult {
+  name: string | null;
+  brand: string | null;
+  category: string | null;
+  treatments: string[] | null;
+}
+
+interface LensVariantResult {
+  id: string;
+  sku: string;
+  sphere_esf: number | null;
+  cylinder_cil: number | null;
+  addition_add: number | null;
+  quantity_available: number;
+  lens_type: LensTypeResult | LensTypeResult[] | null;
+}
+
 export default function SearchLensPage() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<LensVariantResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const supabase = createClient();
@@ -39,7 +56,7 @@ export default function SearchLensPage() {
     if (error) {
       console.error(error);
     } else {
-      setResults(data || []);
+      setResults((data ?? []) as LensVariantResult[]);
     }
 
     setIsLoading(false);
@@ -150,4 +167,3 @@ export default function SearchLensPage() {
     </div>
   );
 }
-

@@ -27,14 +27,12 @@ export async function createLensTypeAction(data: LensTypeInput) {
     return { error: 'Dados inválidos. Verifique os campos e tente novamente.' };
   }
 
-  const { data: insertedLens, error } = await supabase
+  const { error } = await supabase
     .from('lens_types')
     .insert([{
       ...result.data,
       lab_id: profile.lab_id
-    }])
-    .select('id')
-    .single();
+    }]);
 
   if (error) {
     return { error: 'Ocorreu um erro ao criar o tipo de lente. ' + error.message };

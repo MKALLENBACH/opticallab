@@ -22,6 +22,11 @@ const LAB_PASS = 'LenteLab123!';
 const STORE_EMAIL = 'admin@oticavisaolente.com';
 const STORE_PASS = 'VisaoLente123!';
 
+type LensTypeSeedRow = {
+  id: string;
+  name: string;
+};
+
 async function seed() {
   console.log("🚀 Iniciando geração de dados de teste...");
 
@@ -136,8 +141,9 @@ async function seed() {
 
     // 8. Criar Estoque (Lens Variants)
     console.log("📦 Adicionando estoque...");
-    const vsId = lensTypes.find((l: any) => l.name.includes('Visão Simples'))?.id;
-    const mfId = lensTypes.find((l: any) => l.name.includes('Multifocal'))?.id;
+    const typedLensTypes = (lensTypes ?? []) as LensTypeSeedRow[];
+    const vsId = typedLensTypes.find((lens) => lens.name.includes('Visão Simples'))?.id;
+    const mfId = typedLensTypes.find((lens) => lens.name.includes('Multifocal'))?.id;
 
     await supabase.from('lens_variants').insert([
       { lab_id: labId, lens_type_id: vsId, sku: 'LL-VS-AR-001', sphere_esf: -2.00, cylinder_cil: 0, quantity_available: 50 },

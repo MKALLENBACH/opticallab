@@ -27,14 +27,12 @@ export async function createLensVariantAction(data: LensVariantInput) {
     return { error: 'Dados inválidos. Verifique os campos e tente novamente.' };
   }
 
-  const { data: insertedVariant, error } = await supabase
+  const { error } = await supabase
     .from('lens_variants')
     .insert([{
       ...result.data,
       lab_id: profile.lab_id
-    }])
-    .select('id')
-    .single();
+    }]);
 
   if (error) {
     if (error.code === '23505') {

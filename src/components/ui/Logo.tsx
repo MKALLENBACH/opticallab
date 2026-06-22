@@ -26,7 +26,6 @@ export function Logo({ variant = 'full', size = 'md', light = true }: LogoProps)
     );
   }
 
-  const dims = sizeMap[size].full;
   return (
     <div className="flex items-center gap-2.5">
       <Image

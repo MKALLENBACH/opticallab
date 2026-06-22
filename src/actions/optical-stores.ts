@@ -27,14 +27,12 @@ export async function createOpticalStoreAction(data: OpticalStoreInput) {
     return { error: 'Dados inválidos. Verifique os campos e tente novamente.' };
   }
 
-  const { data: insertedStore, error } = await supabase
+  const { error } = await supabase
     .from('optical_stores')
     .insert([{
       ...result.data,
       lab_id: profile.lab_id
-    }])
-    .select('id')
-    .single();
+    }]);
 
   if (error) {
     return { error: 'Ocorreu um erro ao criar a ótica. ' + error.message };

@@ -87,7 +87,6 @@ export default function AuthLayout({
           alt="Background"
           fill
           className="object-cover object-[58%_center] opacity-95 mix-blend-screen lg:object-[34%_center]"
-          quality={100}
           priority
         />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_34%_48%,rgba(89,99,255,0.14)_0%,rgba(5,6,10,0.36)_38%,rgba(5,6,10,0.86)_78%)]" />

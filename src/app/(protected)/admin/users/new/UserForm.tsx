@@ -72,7 +72,7 @@ export function UserForm({ labs }: { labs: LabOption[] }) {
           
           {success && (
             <div className="bg-[var(--color-success-bg)] border border-[var(--color-success)] text-[var(--color-success)] px-4 py-3 rounded-md text-sm">
-              Usuário criado com sucesso! Uma senha temporária foi enviada ou pode ser definida. (Para MVP: use "Mudar123@")
+              Usuário criado com sucesso! Uma senha temporária foi enviada ou pode ser definida. (Para MVP: use <code>Mudar123@</code>)
             </div>
           )}
 
