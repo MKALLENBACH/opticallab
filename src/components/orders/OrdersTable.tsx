@@ -49,14 +49,12 @@ export function OrdersTable({ data, variant, showSearch = true }: OrdersTablePro
       accessor: (row: OrderTableRow) => (
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={row.status} />
-          {variant === 'lab' && (
-            <Link
-              href={orderLink(variant, row.id)}
-              className="inline-flex min-h-8 items-center rounded-xl border border-violet-300/25 bg-violet-500/12 px-3 text-[0.74rem] font-extrabold text-violet-100 transition-colors hover:border-violet-200/40 hover:bg-violet-500/20 hover:text-white"
-            >
-              Acessar Pedido
-            </Link>
-          )}
+          <Link
+            href={orderLink(variant, row.id)}
+            className="inline-flex min-h-8 items-center rounded-xl border border-violet-300/25 bg-violet-500/12 px-3 text-[0.74rem] font-extrabold text-violet-100 transition-colors hover:border-violet-200/40 hover:bg-violet-500/20 hover:text-white"
+          >
+            Acessar Pedido
+          </Link>
         </div>
       ),
     },
