@@ -38,6 +38,14 @@ export interface StoredOrderDraft {
   items: OrderDraftItem[];
 }
 
+export type AvailabilityFilter = 'all' | 'in_stock' | 'backorder';
+
+export const AVAILABILITY_FILTER_OPTIONS: { value: AvailabilityFilter; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'in_stock', label: 'Em estoque' },
+  { value: 'backorder', label: 'Sob encomenda' },
+];
+
 export function normalizeSearchQuery(value: string) {
   return value
     .normalize('NFD')
@@ -105,6 +113,14 @@ export function availabilityFor(variant: OrderDraftVariant) {
     canOrder: false,
     leadTime: null,
   };
+}
+
+export function matchesAvailabilityFilter(variant: OrderDraftVariant, filter: AvailabilityFilter) {
+  if (filter === 'all') return true;
+
+  const availability = availabilityFor(variant);
+  if (filter === 'in_stock') return availability.state === 'available';
+  return availability.state === 'backorder';
 }
 
 export function variantFromRow(row: Record<string, unknown>): OrderDraftVariant {

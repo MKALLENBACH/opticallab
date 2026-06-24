@@ -14,7 +14,10 @@ import { getTreatmentLabel } from '@/lib/constants/treatments';
 import { OrderPriority } from '@/lib/types/enums';
 import {
   availabilityFor,
+  AVAILABILITY_FILTER_OPTIONS,
+  AvailabilityFilter,
   formatGrade,
+  matchesAvailabilityFilter,
   ORDER_DRAFT_STORAGE_KEY,
   OrderDraftItem,
   OrderDraftVariant,
@@ -94,8 +97,10 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
   const [priority, setPriority] = useState<OrderPriority>(initialDraft.priority || OrderPriority.NORMAL);
   const [desiredDate, setDesiredDate] = useState(initialDraft.desired_delivery_date || '');
   const [query, setQuery] = useState('');
+  const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>('all');
   const [results, setResults] = useState<OrderDraftVariant[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasLoadedCatalog, setHasLoadedCatalog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,16 +119,7 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
 
   const runSearch = useCallback(async (value: string, force = false) => {
     const terms = searchTerms(value);
-    const normalized = terms.join(' ');
-
-    if (!terms.length) {
-      searchRequestIdRef.current += 1;
-      lastSearchRef.current = '';
-      setResults([]);
-      setMessage(null);
-      setIsSearching(false);
-      return;
-    }
+    const normalized = `${availabilityFilter}:${terms.join(' ') || 'all'}`;
 
     if (!force && normalized === lastSearchRef.current) return;
 
@@ -165,7 +161,16 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
       `)
       .eq('status', 'active')
       .eq('lens_type.status', 'active')
-      .limit(12);
+      .order('quantity_available', { ascending: false })
+      .order('sku', { ascending: true });
+
+    if (availabilityFilter === 'in_stock') {
+      request = request.gt('quantity_available', 0);
+    }
+
+    if (availabilityFilter === 'backorder') {
+      request = request.lte('quantity_available', 0);
+    }
 
     for (const term of terms) {
       request = request.ilike('searchable_text', `%${term}%`);
@@ -179,12 +184,16 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
       setResults([]);
       setError('Nao foi possivel buscar lentes agora.');
     } else {
-      setResults((data || []).map((row) => variantFromRow(row as Record<string, unknown>)));
-      if (!data?.length) setMessage('Nenhuma lente encontrada para esta busca.');
+      const nextResults = (data || [])
+        .map((row) => variantFromRow(row as Record<string, unknown>))
+        .filter((variant) => matchesAvailabilityFilter(variant, availabilityFilter));
+      setResults(nextResults);
+      if (terms.length && !nextResults.length) setMessage('Nenhuma lente encontrada para esta busca.');
     }
 
+    setHasLoadedCatalog(true);
     setIsSearching(false);
-  }, [supabase]);
+  }, [availabilityFilter, supabase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -192,7 +201,7 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [query, runSearch]);
+  }, [availabilityFilter, query, runSearch]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -328,6 +337,32 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
               Buscar
             </Button>
           </form>
+          <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtro de disponibilidade">
+            {AVAILABILITY_FILTER_OPTIONS.map((option) => {
+              const isActive = availabilityFilter === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setAvailabilityFilter(option.value)}
+                  className={`min-h-10 rounded-2xl border px-4 text-[0.84rem] font-extrabold transition-all ${
+                    isActive
+                      ? 'border-violet-300/40 bg-violet-500/18 text-white shadow-[0_0_24px_rgba(139,92,246,0.16)]'
+                      : 'border-white/10 bg-slate-950/35 text-slate-400 hover:border-violet-300/25 hover:text-white'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          {hasLoadedCatalog && (
+            <p className="mt-3 text-[0.82rem] font-semibold text-slate-500">
+              {isSearching
+                ? 'Carregando catalogo...'
+                : `Mostrando ${results.length} ${results.length === 1 ? 'item' : 'itens'}${query.trim() ? ' encontrados' : ' cadastrados'}.`}
+            </p>
+          )}
 
           <div className="mt-5 grid grid-cols-1 gap-3">
             {results.map((variant) => {
@@ -368,6 +403,15 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
                 </article>
               );
             })}
+            {hasLoadedCatalog && results.length === 0 && !isSearching && (
+              <EmptyState
+                icon={PackageSearch}
+                title="Nenhuma lente encontrada"
+                description={query.trim()
+                  ? 'Tente outra combinacao de nome, SKU, grau, material ou tratamento.'
+                  : 'Nao ha lentes ativas para o filtro selecionado.'}
+              />
+            )}
           </div>
         </SectionCard>
 

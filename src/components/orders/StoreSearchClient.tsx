@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PackageSearch, Search, ShoppingCart, Sparkles } from 'lucide-react';
+import { PackageSearch, Search, ShoppingCart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +12,10 @@ import { EmptyState, HeaderAction, PageHeader, SectionCard } from '@/components/
 import { getTreatmentLabel } from '@/lib/constants/treatments';
 import {
   availabilityFor,
+  AVAILABILITY_FILTER_OPTIONS,
+  AvailabilityFilter,
   formatGrade,
+  matchesAvailabilityFilter,
   ORDER_DRAFT_STORAGE_KEY,
   OrderDraftItem,
   OrderDraftVariant,
@@ -58,6 +61,7 @@ export function StoreSearchClient() {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [query, setQuery] = useState('');
+  const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>('all');
   const [results, setResults] = useState<OrderDraftVariant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -67,17 +71,7 @@ export function StoreSearchClient() {
 
   const runSearch = useCallback(async (value: string, force = false) => {
     const terms = searchTerms(value);
-    const normalized = terms.join(' ');
-
-    if (!terms.length) {
-      requestIdRef.current += 1;
-      lastSearchRef.current = '';
-      setResults([]);
-      setHasSearched(false);
-      setMessage(null);
-      setIsLoading(false);
-      return;
-    }
+    const normalized = `${availabilityFilter}:${terms.join(' ') || 'all'}`;
 
     if (!force && normalized === lastSearchRef.current) return;
 
@@ -119,7 +113,16 @@ export function StoreSearchClient() {
       `)
       .eq('status', 'active')
       .eq('lens_type.status', 'active')
-      .limit(24);
+      .order('quantity_available', { ascending: false })
+      .order('sku', { ascending: true });
+
+    if (availabilityFilter === 'in_stock') {
+      request = request.gt('quantity_available', 0);
+    }
+
+    if (availabilityFilter === 'backorder') {
+      request = request.lte('quantity_available', 0);
+    }
 
     for (const term of terms) {
       request = request.ilike('searchable_text', `%${term}%`);
@@ -134,11 +137,13 @@ export function StoreSearchClient() {
       setResults([]);
       setMessage('Nao foi possivel buscar lentes agora. Tente novamente.');
     } else {
-      setResults((data || []).map((row) => variantFromRow(row as Record<string, unknown>)));
+      setResults((data || [])
+        .map((row) => variantFromRow(row as Record<string, unknown>))
+        .filter((variant) => matchesAvailabilityFilter(variant, availabilityFilter)));
     }
 
     setIsLoading(false);
-  }, [supabase]);
+  }, [availabilityFilter, supabase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -146,7 +151,7 @@ export function StoreSearchClient() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [query, runSearch]);
+  }, [availabilityFilter, query, runSearch]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -197,6 +202,32 @@ export function StoreSearchClient() {
             Buscar
           </Button>
         </form>
+        <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtro de disponibilidade">
+          {AVAILABILITY_FILTER_OPTIONS.map((option) => {
+            const isActive = availabilityFilter === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setAvailabilityFilter(option.value)}
+                className={`min-h-10 rounded-2xl border px-4 text-[0.84rem] font-extrabold transition-all ${
+                  isActive
+                    ? 'border-violet-300/40 bg-violet-500/18 text-white shadow-[0_0_24px_rgba(139,92,246,0.16)]'
+                    : 'border-white/10 bg-slate-950/35 text-slate-400 hover:border-violet-300/25 hover:text-white'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        {hasSearched && (
+          <p className="mt-3 text-[0.82rem] font-semibold text-slate-500">
+            {isLoading
+              ? 'Carregando catalogo...'
+              : `Mostrando ${results.length} ${results.length === 1 ? 'item' : 'itens'}${query.trim() ? ' encontrados' : ' cadastrados'}.`}
+          </p>
+        )}
         {message && (
           <p className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-500/12 px-4 py-3 text-[0.88rem] font-semibold text-amber-100">
             {message}
@@ -275,15 +306,17 @@ export function StoreSearchClient() {
         <EmptyState
           icon={PackageSearch}
           title="Nenhuma lente encontrada"
-          description="Tente outra combinacao de grau, marca, tratamento, SKU ou indice."
+          description={query.trim()
+            ? 'Tente outra combinacao de grau, marca, tratamento, SKU ou indice.'
+            : 'Nao ha lentes ativas para o filtro selecionado.'}
         />
       )}
 
-      {!hasSearched && (
+      {!hasSearched && !isLoading && (
         <EmptyState
-          icon={Sparkles}
-          title="Comece pela busca"
-          description="Os resultados aparecem aqui com estoque, prazo, disponibilidade e atalho para pedido."
+          icon={PackageSearch}
+          title="Carregando catalogo"
+          description="A lista de lentes cadastradas aparecera aqui automaticamente."
         />
       )}
     </div>
