@@ -9,7 +9,7 @@ import {
   StatusBadge,
   TimelineStep,
 } from '@/components/ui/Premium';
-import { formatDateOnly } from '@/lib/format/date';
+import { formatDateOnly, formatDateTime } from '@/lib/format/date';
 
 interface OpticalStoreSummary {
   name: string | null;
@@ -85,17 +85,6 @@ const ORDER_STEPS = [
 
 function formatDate(value: string | null | undefined) {
   return formatDateOnly(value);
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 function formatPower(value: number | null, prefix: string) {

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import Link from 'next/link';
+import { formatTimestampDate } from '@/lib/format/date';
 
 export const metadata = { title: 'Dashboard — Laboratório | LenteLink' };
 
@@ -347,8 +348,7 @@ export default async function LabDashboardPage() {
             ) : (
               <div className="divide-y divide-white/10">
                 {pendingOrders.map((order) => (
-                  <Link
-                    href="/lab/orders"
+                  <div
                     key={order.id}
                     className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-white/[0.035] sm:px-6"
                   >
@@ -357,11 +357,19 @@ export default async function LabDashboardPage() {
                         {order.order_number}
                       </p>
                       <p className="mt-1 truncate text-[0.8rem] font-medium text-slate-400">
-                        {order.optical_store_name} · {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                        {order.optical_store_name} · {formatTimestampDate(order.created_at)}
                       </p>
                     </div>
-                    {statusBadge(order.status)}
-                  </Link>
+                    <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+                      {statusBadge(order.status)}
+                      <Link
+                        href={`/lab/orders/${order.id}`}
+                        className="inline-flex min-h-9 items-center rounded-xl border border-violet-300/25 bg-violet-500/12 px-3 text-[0.76rem] font-extrabold text-violet-100 transition-colors hover:border-violet-200/40 hover:bg-violet-500/20 hover:text-white"
+                      >
+                        Acessar Pedido
+                      </Link>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
