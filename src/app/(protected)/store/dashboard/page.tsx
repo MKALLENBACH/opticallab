@@ -47,7 +47,7 @@ export default async function StoreDashboardPage() {
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('optical_store_id', storeId).eq('status', 'finalizado'),
     supabase
       .from('orders')
-      .select('id, order_number, status, priority, desired_delivery_date, created_at, items:order_items(id)')
+      .select('id, order_number, status, order_type, special_status, priority, desired_delivery_date, created_at, items:order_items(id)')
       .eq('optical_store_id', storeId)
       .order('created_at', { ascending: false })
       .limit(5),

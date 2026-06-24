@@ -33,8 +33,13 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
       lab_id,
       order_number,
       status,
+      order_type,
+      special_status,
       priority,
       desired_delivery_date,
+      estimated_delivery_date,
+      lab_estimated_delivery_notes,
+      special_rejection_reason,
       notes,
       internal_notes,
       confirmed_at,
@@ -60,7 +65,7 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
         addition_add,
         side,
         item_notes,
-        lens_type:lens_types(name, brand, category, material),
+        lens_type:lens_types(name, brand, category, material, refractive_index, treatments),
         lens_variant:lens_variants(sku, quantity_available)
       `)
       .eq('order_id', id)
@@ -105,7 +110,15 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
       eyebrow="Pedido recebido"
       description="Detalhes operacionais, itens, historico e observacoes do pedido recebido da otica."
       showInternalNotes
-      sideActions={<LabOrderDetailActions orderId={typedOrder.id} status={typedOrder.status} internalNotes={typedOrder.internal_notes} />}
+      sideActions={(
+        <LabOrderDetailActions
+          orderId={typedOrder.id}
+          status={typedOrder.status}
+          orderType={typedOrder.order_type}
+          specialStatus={typedOrder.special_status}
+          internalNotes={typedOrder.internal_notes}
+        />
+      )}
     />
   );
 }

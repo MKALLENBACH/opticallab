@@ -1,5 +1,6 @@
-import { CalendarClock, ClipboardList, FileText, Glasses, History, Store } from 'lucide-react';
+import { CalendarClock, ClipboardList, FileText, Glasses, History, Sparkles, Store } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Badge } from '@/components/ui/Badge';
 import {
   EmptyState,
   InfoRow,
@@ -23,8 +24,13 @@ export interface OrderDetailData {
   id: string;
   order_number: string;
   status: string;
+  order_type?: string | null;
+  special_status?: string | null;
   priority: string;
   desired_delivery_date: string | null;
+  estimated_delivery_date?: string | null;
+  lab_estimated_delivery_notes?: string | null;
+  special_rejection_reason?: string | null;
   notes: string | null;
   internal_notes: string | null;
   confirmed_at: string | null;
@@ -47,6 +53,8 @@ export interface OrderItemDetail {
     brand: string | null;
     category: string | null;
     material: string | null;
+    refractive_index?: string | null;
+    treatments?: string[] | null;
   } | null;
   lens_variant: {
     sku: string | null;
@@ -123,6 +131,19 @@ function statusText(status: string | null) {
   return status ? map[status] || status : '-';
 }
 
+function specialStatusText(status: string | null | undefined) {
+  const map: Record<string, string> = {
+    aguardando_analise: 'Aguardando analise',
+    aprovado: 'Aprovado',
+    rejeitado: 'Rejeitado',
+    em_producao: 'Em producao',
+    em_entrega: 'Em entrega',
+    finalizado: 'Finalizado',
+    cancelado: 'Cancelado',
+  };
+  return status ? map[status] || status : '-';
+}
+
 export function OrderDetailView({
   order,
   items,
@@ -135,6 +156,7 @@ export function OrderDetailView({
 }: OrderDetailViewProps) {
   const currentStepIndex = ORDER_STEPS.findIndex((step) => step.value === order.status);
   const isCanceled = order.status === 'cancelado';
+  const isSpecial = order.order_type === 'special';
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -145,6 +167,7 @@ export function OrderDetailView({
         description={description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {isSpecial && <Badge variant="info" dot>Pedido Especial</Badge>}
             <StatusBadge status={order.status} />
             <PriorityBadge priority={order.priority} />
           </div>
@@ -161,6 +184,7 @@ export function OrderDetailView({
             <InfoRow label="Prioridade" value={<PriorityBadge priority={order.priority} />} />
             <InfoRow label="Criado em" value={formatDateTime(order.created_at)} />
             <InfoRow label="Entrega desejada" value={formatDate(order.desired_delivery_date)} />
+            {isSpecial && <InfoRow label="Prazo estimado" value={formatDate(order.estimated_delivery_date)} />}
             <InfoRow label="Confirmado em" value={formatDateTime(order.confirmed_at)} />
           </div>
         </SectionCard>
@@ -233,6 +257,40 @@ export function OrderDetailView({
           </div>
         )}
       </SectionCard>
+
+      {isSpecial && (
+        <SectionCard icon={Sparkles} title="Dados do Pedido Especial" description="Solicitacao sob demanda criada a partir do catalogo do laboratorio.">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <InfoRow label="Status especial" value={specialStatusText(order.special_status)} />
+            <InfoRow label="Prazo desejado pela otica" value={formatDate(order.desired_delivery_date)} />
+            <InfoRow label="Prazo estimado do laboratorio" value={formatDate(order.estimated_delivery_date)} />
+            <InfoRow label="Mensagem do laboratorio" value={order.lab_estimated_delivery_notes || 'Ainda nao informado'} />
+          </div>
+          {order.special_rejection_reason && (
+            <div className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-[0.9rem] font-semibold text-red-100">
+              Motivo da rejeicao: {order.special_rejection_reason}
+            </div>
+          )}
+          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {items.map((item) => (
+              <article key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                <p className="font-extrabold text-white">{item.lens_type?.name || 'Lente nao informada'}</p>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-[0.84rem] font-semibold text-slate-400 sm:grid-cols-2">
+                  <span>Marca: <strong className="text-slate-200">{item.lens_type?.brand || '-'}</strong></span>
+                  <span>Categoria: <strong className="text-slate-200">{item.lens_type?.category || '-'}</strong></span>
+                  <span>Material: <strong className="text-slate-200">{item.lens_type?.material || '-'}</strong></span>
+                  <span>Indice: <strong className="text-slate-200">{item.lens_type?.refractive_index || '-'}</strong></span>
+                  <span>Lado: <strong className="text-slate-200">{formatSide(item.side)}</strong></span>
+                  <span>Quantidade: <strong className="text-slate-200">{item.quantity} un</strong></span>
+                </div>
+                <div className="mt-3 rounded-2xl border border-violet-300/18 bg-violet-500/10 px-4 py-3 font-mono text-[0.92rem] font-bold text-white">
+                  {formatGrade(item)}
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      )}
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[0.9fr_1.1fr]">
         <SectionCard icon={FileText} title="Observacoes" description="Mensagens registradas no pedido.">

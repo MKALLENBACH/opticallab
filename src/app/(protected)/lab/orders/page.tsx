@@ -33,6 +33,8 @@ export default async function LabOrdersPage() {
       id,
       order_number,
       status,
+      order_type,
+      special_status,
       priority,
       desired_delivery_date,
       created_at,

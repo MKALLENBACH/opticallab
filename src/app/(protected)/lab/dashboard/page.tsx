@@ -33,6 +33,8 @@ interface PendingOrderItem {
   id: string;
   order_number: string;
   status: string;
+  order_type: string | null;
+  special_status: string | null;
   created_at: string;
   optical_store_name: string;
 }
@@ -234,7 +236,7 @@ export default async function LabDashboardPage() {
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('lab_id', labId).eq('status', 'aguardando_confirmacao'),
     supabase.from('lens_variants').select('id', { count: 'exact', head: true }).eq('lab_id', labId).gt('quantity_available', 0),
     supabase.from('orders')
-      .select('id, order_number, status, created_at, optical_stores(name)')
+      .select('id, order_number, status, order_type, special_status, created_at, optical_stores(name)')
       .eq('lab_id', labId)
       .eq('status', 'aguardando_confirmacao')
       .order('created_at', { ascending: false })
@@ -247,6 +249,8 @@ export default async function LabDashboardPage() {
       id: order.id,
       order_number: order.order_number,
       status: order.status,
+      order_type: order.order_type,
+      special_status: order.special_status,
       created_at: order.created_at,
       optical_store_name: store?.name || '—',
     };
@@ -361,6 +365,7 @@ export default async function LabDashboardPage() {
                       </p>
                     </div>
                     <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+                      {order.order_type === 'special' && <Badge variant="info" dot>Pedido Especial</Badge>}
                       {statusBadge(order.status)}
                       <Link
                         href={`/lab/orders/${order.id}`}

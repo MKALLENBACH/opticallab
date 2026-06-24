@@ -34,8 +34,13 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
       lab_id,
       order_number,
       status,
+      order_type,
+      special_status,
       priority,
       desired_delivery_date,
+      estimated_delivery_date,
+      lab_estimated_delivery_notes,
+      special_rejection_reason,
       notes,
       internal_notes,
       confirmed_at,
@@ -62,7 +67,7 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
         addition_add,
         side,
         item_notes,
-        lens_type:lens_types(name, brand, category, material),
+        lens_type:lens_types(name, brand, category, material, refractive_index, treatments),
         lens_variant:lens_variants(sku, quantity_available)
       `)
       .eq('order_id', id)
@@ -107,7 +112,7 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
       backHref="/store/orders"
       eyebrow="Meu pedido"
       description="Acompanhe status, itens solicitados e historico do pedido enviado ao laboratorio."
-      sideActions={<StoreOrderDetailActions orderId={typedOrder.id} status={typedOrder.status} />}
+      sideActions={<StoreOrderDetailActions orderId={typedOrder.id} status={typedOrder.status} orderType={typedOrder.order_type} />}
     />
   );
 }

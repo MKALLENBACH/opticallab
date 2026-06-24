@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Edit3, FileText, Send, XCircle } from 'lucide-react';
-import { updateLabOrderNotesAction, updateLabOrderStatusAction } from '@/actions/orders';
+import { approveSpecialOrderAction, rejectSpecialOrderAction, updateLabOrderNotesAction, updateLabOrderStatusAction } from '@/actions/orders';
 import { getAvailableTransitions } from '@/lib/constants/order-flow';
 import { OrderStatus } from '@/lib/types/enums';
 import { Button } from '@/components/ui/Button';
@@ -24,9 +24,17 @@ function statusIcon(status: OrderStatus) {
   return <Send size={16} />;
 }
 
-export function StoreOrderDetailActions({ orderId, status }: { orderId: string; status: string }) {
+export function StoreOrderDetailActions({
+  orderId,
+  status,
+  orderType = 'normal',
+}: {
+  orderId: string;
+  status: string;
+  orderType?: string | null;
+}) {
   const router = useRouter();
-  const canEdit = status === OrderStatus.AGUARDANDO_CONFIRMACAO;
+  const canEdit = status === OrderStatus.AGUARDANDO_CONFIRMACAO && orderType !== 'special';
 
   return (
     <SectionCard
@@ -34,6 +42,8 @@ export function StoreOrderDetailActions({ orderId, status }: { orderId: string; 
       title="Acoes do pedido"
       description={canEdit
         ? 'Este pedido ainda pode ser ajustado antes da confirmacao do laboratorio.'
+        : orderType === 'special'
+          ? 'Pedidos especiais sao analisados pelo laboratorio e nao usam a edicao normal por SKU.'
         : 'Depois da confirmacao, alteracoes precisam ser combinadas com o laboratorio.'}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -56,10 +66,14 @@ export function StoreOrderDetailActions({ orderId, status }: { orderId: string; 
 export function LabOrderDetailActions({
   orderId,
   status,
+  orderType = 'normal',
+  specialStatus,
   internalNotes,
 }: {
   orderId: string;
   status: string;
+  orderType?: string | null;
+  specialStatus?: string | null;
   internalNotes: string | null;
 }) {
   const router = useRouter();
@@ -68,8 +82,13 @@ export function LabOrderDetailActions({
   const [confirmingStatus, setConfirmingStatus] = useState<OrderStatus | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [estimatedDate, setEstimatedDate] = useState('');
+  const [estimatedNotes, setEstimatedNotes] = useState('');
+  const [createSku, setCreateSku] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const currentStatus = status as OrderStatus;
-  const transitions = getAvailableTransitions(currentStatus, true);
+  const isSpecialPending = orderType === 'special' && specialStatus === 'aguardando_analise';
+  const transitions = isSpecialPending ? [] : getAvailableTransitions(currentStatus, true);
 
   const saveNotes = async () => {
     setPendingAction('notes');
@@ -118,6 +137,45 @@ export function LabOrderDetailActions({
     router.refresh();
   };
 
+  const approveSpecial = async () => {
+    setPendingAction('approve-special');
+    setError(null);
+    setMessage(null);
+
+    const result = await approveSpecialOrderAction({
+      orderId,
+      estimated_delivery_date: estimatedDate,
+      lab_estimated_delivery_notes: estimatedNotes,
+      create_sku: createSku,
+    });
+    setPendingAction(null);
+
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+
+    setMessage(createSku ? 'Pedido especial aprovado e SKU criado.' : 'Pedido especial aprovado.');
+    router.refresh();
+  };
+
+  const rejectSpecial = async () => {
+    setPendingAction('reject-special');
+    setError(null);
+    setMessage(null);
+
+    const result = await rejectSpecialOrderAction({ orderId, reason: rejectReason });
+    setPendingAction(null);
+
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+
+    setMessage('Pedido especial rejeitado.');
+    router.refresh();
+  };
+
   return (
     <SectionCard
       icon={FileText}
@@ -149,7 +207,65 @@ export function LabOrderDetailActions({
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
           <p className="text-[0.78rem] font-extrabold uppercase tracking-[0.14em] text-slate-500">Proximas acoes</p>
-          {transitions.length ? (
+          {isSpecialPending ? (
+            <div className="mt-4 flex flex-col gap-3">
+              <label className="flex flex-col gap-2 text-[0.82rem] font-bold text-slate-200">
+                Prazo estimado
+                <input
+                  type="date"
+                  value={estimatedDate}
+                  onChange={(event) => setEstimatedDate(event.target.value)}
+                  className="min-h-11 rounded-2xl border border-white/10 bg-slate-950/62 px-3 text-white outline-none"
+                />
+              </label>
+              <label className="flex flex-col gap-2 text-[0.82rem] font-bold text-slate-200">
+                Mensagem para a otica
+                <textarea
+                  value={estimatedNotes}
+                  onChange={(event) => setEstimatedNotes(event.target.value)}
+                  rows={3}
+                  className="resize-y rounded-2xl border border-white/10 bg-slate-950/62 px-3 py-2 text-white outline-none"
+                  placeholder="Ex: Entrega estimada em 7 dias uteis."
+                />
+              </label>
+              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/35 px-3 py-3 text-[0.84rem] font-bold text-slate-200">
+                <input type="checkbox" checked={createSku} onChange={(event) => setCreateSku(event.target.checked)} />
+                Criar SKU a partir deste pedido
+              </label>
+              <Button
+                type="button"
+                variant="success"
+                isLoading={pendingAction === 'approve-special'}
+                disabled={Boolean(pendingAction)}
+                onClick={approveSpecial}
+                leftIcon={<CheckCircle2 size={16} />}
+                className="w-full"
+              >
+                Aprovar pedido especial
+              </Button>
+              <label className="flex flex-col gap-2 text-[0.82rem] font-bold text-slate-200">
+                Motivo da rejeicao
+                <textarea
+                  value={rejectReason}
+                  onChange={(event) => setRejectReason(event.target.value)}
+                  rows={3}
+                  className="resize-y rounded-2xl border border-white/10 bg-slate-950/62 px-3 py-2 text-white outline-none"
+                  placeholder="Ex: Material indisponivel no momento."
+                />
+              </label>
+              <Button
+                type="button"
+                variant="danger"
+                isLoading={pendingAction === 'reject-special'}
+                disabled={Boolean(pendingAction)}
+                onClick={rejectSpecial}
+                leftIcon={<XCircle size={16} />}
+                className="w-full"
+              >
+                Rejeitar pedido especial
+              </Button>
+            </div>
+          ) : transitions.length ? (
             <div className="mt-4 flex flex-col gap-2">
               {transitions.map((nextStatus) => (
                 <Button

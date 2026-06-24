@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { canTransitionStatus } from '@/lib/constants/order-flow';
-import { OrderPriority, OrderStatus, UserRole } from '@/lib/types/enums';
+import { EntityStatus, LensSide, OrderPriority, OrderStatus, UserRole } from '@/lib/types/enums';
 
 const orderBuilderItemSchema = z.object({
   lens_variant_id: z.string().uuid('Lente invalida.'),
@@ -19,6 +19,52 @@ const storeOrderPayloadSchema = z.object({
   items: z.array(orderBuilderItemSchema).min(1, 'Adicione pelo menos uma lente ao pedido.'),
 });
 
+const lensPowerSchema = z.object({
+  sphere_esf: z.number().min(-30, 'ESF deve estar entre -30.00 e +30.00.').max(30, 'ESF deve estar entre -30.00 e +30.00.'),
+  cylinder_cil: z.number().min(-10, 'CIL deve estar entre -10.00 e +10.00.').max(10, 'CIL deve estar entre -10.00 e +10.00.').nullable().optional(),
+  axis: z.number().int().min(0, 'Eixo deve estar entre 0 e 180.').max(180, 'Eixo deve estar entre 0 e 180.').nullable().optional(),
+  addition_add: z.number().min(0, 'ADD deve estar entre 0.00 e +4.00.').max(4, 'ADD deve estar entre 0.00 e +4.00.').nullable().optional(),
+});
+
+const specialOrderPayloadSchema = z.object({
+  lens_type_id: z.string().uuid('Selecione uma lente valida do catalogo.'),
+  treatments: z.array(z.string()).default([]),
+  side: z.nativeEnum(LensSide, { error: 'Selecione o lado da lente.' }),
+  quantity: z.number().int().min(1, 'Quantidade deve ser maior que zero.'),
+  desired_delivery_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  optical_notes: z.string().trim().max(2000).nullable().optional(),
+  right_power: lensPowerSchema.nullable().optional(),
+  left_power: lensPowerSchema.nullable().optional(),
+  single_power: lensPowerSchema.nullable().optional(),
+  force_special: z.boolean().default(false),
+}).superRefine((value, ctx) => {
+  if (value.side === LensSide.PAIR) {
+    if (!value.right_power) {
+      ctx.addIssue({ code: 'custom', path: ['right_power'], message: 'Informe o grau do olho direito.' });
+    }
+    if (!value.left_power) {
+      ctx.addIssue({ code: 'custom', path: ['left_power'], message: 'Informe o grau do olho esquerdo.' });
+    }
+    return;
+  }
+
+  if (!value.single_power) {
+    ctx.addIssue({ code: 'custom', path: ['single_power'], message: 'Informe o grau solicitado.' });
+  }
+});
+
+const specialAnalysisPayloadSchema = z.object({
+  orderId: z.string().uuid(),
+  estimated_delivery_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data estimada.'),
+  lab_estimated_delivery_notes: z.string().trim().min(1, 'Informe uma observacao de prazo.').max(2000),
+  create_sku: z.boolean().default(false),
+});
+
+const specialRejectPayloadSchema = z.object({
+  orderId: z.string().uuid(),
+  reason: z.string().trim().min(1, 'Informe o motivo da rejeicao.').max(2000),
+});
+
 const updateStatusSchema = z.object({
   orderId: z.string().uuid(),
   nextStatus: z.nativeEnum(OrderStatus),
@@ -26,6 +72,7 @@ const updateStatusSchema = z.object({
 });
 
 type StoreOrderPayload = z.infer<typeof storeOrderPayloadSchema>;
+type SpecialOrderPayload = z.infer<typeof specialOrderPayloadSchema>;
 type ValidatedOrderItem = StoreOrderPayload['items'][number] & {
   lens_type_id: string;
   sphere_esf: number | null;
@@ -37,6 +84,11 @@ type ValidatedOrderItem = StoreOrderPayload['items'][number] & {
   base_curve: number | null;
   diameter: number | null;
   side: string | null;
+};
+
+type SpecialOrderItemInput = {
+  side: LensSide;
+  power: z.infer<typeof lensPowerSchema>;
 };
 
 type ProfileContext = {
@@ -193,6 +245,130 @@ async function validateStoreOrderItems(
   return { items: validated };
 }
 
+function specialItemsFromPayload(payload: SpecialOrderPayload): SpecialOrderItemInput[] {
+  if (payload.side === LensSide.PAIR) {
+    return [
+      { side: LensSide.RIGHT, power: payload.right_power! },
+      { side: LensSide.LEFT, power: payload.left_power! },
+    ];
+  }
+
+  return [{ side: payload.side, power: payload.single_power! }];
+}
+
+function sameTreatmentSet(a: string[] = [], b: string[] = []) {
+  const normalize = (value: string) => value.trim().toLowerCase();
+  const left = [...new Set(a.map(normalize).filter(Boolean))].sort();
+  const right = [...new Set(b.map(normalize).filter(Boolean))].sort();
+  return left.length === right.length && left.every((item, index) => item === right[index]);
+}
+
+async function validateSpecialLensType(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  labId: string,
+  payload: SpecialOrderPayload
+) {
+  const { data: lensType, error } = await supabase
+    .from('lens_types')
+    .select('id, lab_id, name, brand, category, material, refractive_index, treatments, status, default_production_time_out_of_stock_days')
+    .eq('id', payload.lens_type_id)
+    .eq('lab_id', labId)
+    .eq('status', EntityStatus.ACTIVE)
+    .single();
+
+  if (error || !lensType) {
+    return { error: 'Selecione uma lente ativa do catalogo do laboratorio.' as const };
+  }
+
+  if (!sameTreatmentSet((lensType.treatments || []).map(String), payload.treatments)) {
+    return { error: 'Os tratamentos precisam vir da lente selecionada no catalogo.' as const };
+  }
+
+  return { lensType };
+}
+
+async function findCompatibleSpecialVariants(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  labId: string,
+  lensTypeId: string,
+  items: SpecialOrderItemInput[]
+) {
+  const matches = [];
+
+  for (const item of items) {
+    let request = supabase
+      .from('lens_variants')
+      .select(`
+        id,
+        lens_type_id,
+        sku,
+        sphere_esf,
+        cylinder_cil,
+        axis,
+        addition_add,
+        side,
+        quantity_available,
+        delivery_time_in_stock_days,
+        production_time_out_of_stock_days,
+        lens_type:lens_types!inner(
+          id,
+          name,
+          brand,
+          category,
+          material,
+          refractive_index,
+          treatments,
+          allow_order_when_out_of_stock,
+          default_delivery_time_in_stock_days,
+          default_production_time_out_of_stock_days
+        )
+      `)
+      .eq('lab_id', labId)
+      .eq('lens_type_id', lensTypeId)
+      .eq('status', EntityStatus.ACTIVE)
+      .eq('lens_type.status', EntityStatus.ACTIVE)
+      .eq('side', item.side)
+      .eq('sphere_esf', item.power.sphere_esf);
+
+    if (item.power.cylinder_cil === null || item.power.cylinder_cil === undefined) {
+      request = request.is('cylinder_cil', null);
+    } else {
+      request = request.eq('cylinder_cil', item.power.cylinder_cil);
+    }
+
+    if (item.power.axis === null || item.power.axis === undefined) {
+      request = request.is('axis', null);
+    } else {
+      request = request.eq('axis', item.power.axis);
+    }
+
+    if (item.power.addition_add === null || item.power.addition_add === undefined) {
+      request = request.is('addition_add', null);
+    } else {
+      request = request.eq('addition_add', item.power.addition_add);
+    }
+
+    const { data, error } = await request.limit(3);
+    if (error) continue;
+    matches.push(...(data || []));
+  }
+
+  return matches;
+}
+
+function buildSpecialSku(orderNumber: string, side: LensSide, index: number) {
+  const sideToken = side === LensSide.RIGHT ? 'OD' : side === LensSide.LEFT ? 'OE' : 'NA';
+  return `ESP-${orderNumber.replace(/[^A-Z0-9]/gi, '')}-${sideToken}-${index + 1}`;
+}
+
+function daysUntil(dateValue: string) {
+  const today = new Date();
+  const target = new Date(`${dateValue}T00:00:00`);
+  today.setHours(0, 0, 0, 0);
+  const diff = target.getTime() - today.getTime();
+  return Math.max(0, Math.ceil(diff / 86_400_000));
+}
+
 function revalidateOrderRoutes(orderId?: string) {
   revalidatePath('/store/orders');
   revalidatePath('/lab/orders');
@@ -280,6 +456,102 @@ export async function createStoreOrderAction(payload: StoreOrderPayload) {
     new_status: OrderStatus.AGUARDANDO_CONFIRMACAO,
     changed_by_profile_id: profile.id,
     notes: 'Pedido criado pela otica.',
+  });
+
+  revalidateOrderRoutes(order.id);
+  return { success: true, orderId: order.id };
+}
+
+export async function createSpecialOrderAction(payload: SpecialOrderPayload) {
+  const parsed = specialOrderPayloadSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || 'Revise os dados do pedido especial.' };
+  }
+
+  const context = await getProfileContext();
+  if ('error' in context) return { error: context.error };
+
+  const { supabase, profile } = context;
+
+  if (!profile.optical_store_id || ![UserRole.OPTICAL_ADMIN, UserRole.OPTICAL_USER].includes(profile.role)) {
+    return { error: 'Apenas usuarios de otica podem criar pedidos especiais.' };
+  }
+
+  const specialItems = specialItemsFromPayload(parsed.data);
+  const lensTypeResult = await validateSpecialLensType(supabase, profile.lab_id, parsed.data);
+  if ('error' in lensTypeResult) return { error: lensTypeResult.error };
+
+  const compatibleVariants = await findCompatibleSpecialVariants(
+    supabase,
+    profile.lab_id,
+    parsed.data.lens_type_id,
+    specialItems
+  );
+
+  if (compatibleVariants.length && !parsed.data.force_special) {
+    return {
+      requiresConfirmation: true,
+      matches: compatibleVariants,
+    };
+  }
+
+  const { data: orderNumber, error: numberError } = await supabase.rpc('get_next_order_number', {
+    p_lab_id: profile.lab_id,
+  });
+
+  if (numberError || !orderNumber) {
+    return { error: 'Nao foi possivel gerar o numero do pedido especial.' };
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .insert({
+      lab_id: profile.lab_id,
+      optical_store_id: profile.optical_store_id,
+      order_number: orderNumber,
+      status: OrderStatus.AGUARDANDO_CONFIRMACAO,
+      order_type: 'special',
+      special_status: 'aguardando_analise',
+      priority: OrderPriority.NORMAL,
+      desired_delivery_date: parsed.data.desired_delivery_date || null,
+      requested_by_profile_id: profile.id,
+      notes: parsed.data.optical_notes || null,
+      matched_lens_variant_id: compatibleVariants[0]?.id || null,
+    })
+    .select('id')
+    .single();
+
+  if (orderError || !order) {
+    return { error: 'Nao foi possivel criar o pedido especial.' };
+  }
+
+  const { error: itemsError } = await supabase.from('order_items').insert(
+    specialItems.map((item) => ({
+      order_id: order.id,
+      lab_id: profile.lab_id,
+      lens_type_id: parsed.data.lens_type_id,
+      lens_variant_id: null,
+      quantity: parsed.data.quantity,
+      sphere_esf: item.power.sphere_esf,
+      cylinder_cil: item.power.cylinder_cil ?? null,
+      axis: item.power.axis ?? null,
+      addition_add: item.power.addition_add ?? null,
+      side: item.side,
+      item_notes: parsed.data.optical_notes || null,
+    }))
+  );
+
+  if (itemsError) {
+    return { error: 'Pedido especial criado, mas houve erro ao vincular os dados da lente. Contate o laboratorio.' };
+  }
+
+  await supabase.from('order_status_history').insert({
+    order_id: order.id,
+    lab_id: profile.lab_id,
+    old_status: null,
+    new_status: OrderStatus.AGUARDANDO_CONFIRMACAO,
+    changed_by_profile_id: profile.id,
+    notes: 'Pedido especial criado pela otica. Aguardando analise do laboratorio.',
   });
 
   revalidateOrderRoutes(order.id);
@@ -378,6 +650,158 @@ export async function updateStoreOrderAction(orderId: string, payload: StoreOrde
 
   revalidateOrderRoutes(orderId);
   return { success: true, orderId };
+}
+
+export async function approveSpecialOrderAction(input: z.infer<typeof specialAnalysisPayloadSchema>) {
+  const parsed = specialAnalysisPayloadSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Revise a analise do pedido especial.' };
+
+  const context = await getProfileContext();
+  if ('error' in context) return { error: context.error };
+
+  const { supabase, profile } = context;
+
+  if (![UserRole.LAB_ADMIN, UserRole.LAB_USER].includes(profile.role)) {
+    return { error: 'Apenas usuarios do laboratorio podem analisar pedidos especiais.' };
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id, lab_id, order_number, order_type, special_status')
+    .eq('id', parsed.data.orderId)
+    .eq('lab_id', profile.lab_id)
+    .eq('order_type', 'special')
+    .single();
+
+  if (orderError || !order) return { error: 'Pedido especial nao encontrado.' };
+
+  const { data: items, error: itemsError } = await supabase
+    .from('order_items')
+    .select('id, lens_type_id, quantity, sphere_esf, cylinder_cil, axis, addition_add, side')
+    .eq('order_id', order.id)
+    .eq('lab_id', profile.lab_id)
+    .order('created_at', { ascending: true });
+
+  if (itemsError || !items?.length) return { error: 'Dados da lente do pedido especial nao encontrados.' };
+
+  const createdVariantIds: string[] = [];
+
+  if (parsed.data.create_sku) {
+    for (const [index, item] of items.entries()) {
+      const { data: variant, error: variantError } = await supabase
+        .from('lens_variants')
+        .insert({
+          lab_id: profile.lab_id,
+          lens_type_id: item.lens_type_id,
+          sku: buildSpecialSku(order.order_number, item.side as LensSide, index),
+          sphere_esf: item.sphere_esf,
+          cylinder_cil: item.cylinder_cil,
+          axis: item.axis,
+          addition_add: item.addition_add,
+          side: item.side || LensSide.NOT_APPLICABLE,
+          quantity_available: 0,
+          production_time_out_of_stock_days: daysUntil(parsed.data.estimated_delivery_date),
+          status: EntityStatus.ACTIVE,
+          source_special_order_id: order.id,
+        })
+        .select('id')
+        .single();
+
+      if (variantError || !variant) {
+        return { error: 'Nao foi possivel criar o SKU a partir do pedido especial.' };
+      }
+
+      createdVariantIds.push(variant.id);
+
+      await supabase
+        .from('order_items')
+        .update({ lens_variant_id: variant.id })
+        .eq('id', item.id)
+        .eq('lab_id', profile.lab_id);
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from('orders')
+    .update({
+      status: OrderStatus.CONFIRMADO,
+      special_status: 'aprovado',
+      estimated_delivery_date: parsed.data.estimated_delivery_date,
+      lab_estimated_delivery_notes: parsed.data.lab_estimated_delivery_notes,
+      confirmed_by_profile_id: profile.id,
+      confirmed_at: new Date().toISOString(),
+      created_lens_variant_id: createdVariantIds[0] || null,
+    })
+    .eq('id', order.id)
+    .eq('lab_id', profile.lab_id);
+
+  if (updateError) return { error: 'Nao foi possivel aprovar o pedido especial.' };
+
+  await supabase.from('order_status_history').insert({
+    order_id: order.id,
+    lab_id: profile.lab_id,
+    old_status: OrderStatus.AGUARDANDO_CONFIRMACAO,
+    new_status: OrderStatus.CONFIRMADO,
+    changed_by_profile_id: profile.id,
+    notes: parsed.data.create_sku
+      ? 'Pedido especial aprovado e SKU criado pelo laboratorio.'
+      : 'Pedido especial aprovado sem criar SKU.',
+  });
+
+  revalidateOrderRoutes(order.id);
+  revalidatePath('/lab/stock');
+  revalidatePath('/store/search');
+  revalidatePath('/store/orders/new');
+  return { success: true };
+}
+
+export async function rejectSpecialOrderAction(input: z.infer<typeof specialRejectPayloadSchema>) {
+  const parsed = specialRejectPayloadSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Informe o motivo da rejeicao.' };
+
+  const context = await getProfileContext();
+  if ('error' in context) return { error: context.error };
+
+  const { supabase, profile } = context;
+
+  if (![UserRole.LAB_ADMIN, UserRole.LAB_USER].includes(profile.role)) {
+    return { error: 'Apenas usuarios do laboratorio podem rejeitar pedidos especiais.' };
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id, status')
+    .eq('id', parsed.data.orderId)
+    .eq('lab_id', profile.lab_id)
+    .eq('order_type', 'special')
+    .single();
+
+  if (orderError || !order) return { error: 'Pedido especial nao encontrado.' };
+
+  const { error: updateError } = await supabase
+    .from('orders')
+    .update({
+      status: OrderStatus.CANCELADO,
+      special_status: 'rejeitado',
+      special_rejection_reason: parsed.data.reason,
+      internal_notes: parsed.data.reason,
+    })
+    .eq('id', order.id)
+    .eq('lab_id', profile.lab_id);
+
+  if (updateError) return { error: 'Nao foi possivel rejeitar o pedido especial.' };
+
+  await supabase.from('order_status_history').insert({
+    order_id: order.id,
+    lab_id: profile.lab_id,
+    old_status: order.status,
+    new_status: OrderStatus.CANCELADO,
+    changed_by_profile_id: profile.id,
+    notes: parsed.data.reason,
+  });
+
+  revalidateOrderRoutes(order.id);
+  return { success: true };
 }
 
 export async function updateLabOrderStatusAction(input: z.infer<typeof updateStatusSchema>) {

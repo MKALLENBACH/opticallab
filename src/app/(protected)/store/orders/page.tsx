@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { OrdersTable, type OrderTableRow } from '@/components/orders/OrdersTable';
 import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
-import { ClipboardList, Plus } from 'lucide-react';
+import { ClipboardList, Plus, Sparkles } from 'lucide-react';
 
 export const metadata = { title: 'Meus Pedidos | LenteLink' };
 
@@ -33,6 +33,8 @@ export default async function StoreOrdersPage() {
       id,
       order_number,
       status,
+      order_type,
+      special_status,
       priority,
       desired_delivery_date,
       created_at,
@@ -56,7 +58,12 @@ export default async function StoreOrdersPage() {
         eyebrow="Otica"
         title="Meus pedidos"
         description="Acompanhe o historico e o status de cada pedido enviado ao laboratorio."
-        actions={<HeaderAction href="/store/orders/new" icon={<Plus size={17} />}>Novo pedido</HeaderAction>}
+        actions={(
+          <>
+            <HeaderAction href="/store/orders/special/new" icon={<Sparkles size={17} />}>Pedido Especial</HeaderAction>
+            <HeaderAction href="/store/orders/new" icon={<Plus size={17} />}>Novo pedido</HeaderAction>
+          </>
+        )}
       />
 
       <SectionCard

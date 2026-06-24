@@ -17,6 +17,7 @@ export interface OrderDraftVariant {
   cylinder_cil: number | null;
   axis: number | null;
   addition_add: number | null;
+  side: string | null;
   quantity_available: number;
   minimum_stock: number | null;
   delivery_time_in_stock_days: number | null;
@@ -143,6 +144,7 @@ export function variantFromRow(row: Record<string, unknown>): OrderDraftVariant 
     cylinder_cil: nullableNumber(row.cylinder_cil),
     axis: nullableNumber(row.axis),
     addition_add: nullableNumber(row.addition_add),
+    side: (row.side as string | null) ?? null,
     quantity_available: Number(row.quantity_available ?? 0),
     minimum_stock: nullableNumber(row.minimum_stock),
     delivery_time_in_stock_days: nullableNumber(row.delivery_time_in_stock_days),
