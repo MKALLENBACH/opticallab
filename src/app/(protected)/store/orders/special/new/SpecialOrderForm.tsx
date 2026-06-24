@@ -11,8 +11,8 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { EmptyState, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { LensSide, OrderPriority } from '@/lib/types/enums';
-import { getTreatmentLabel } from '@/lib/constants/treatments';
-import { availabilityFor, formatGrade, type OrderDraftVariant, variantFromRow } from '@/components/orders/orderDraft';
+import { getTreatmentLabel, normalizeTreatmentName } from '@/lib/constants/treatments';
+import { availabilityFor, formatGrade, formatLeadTime, type OrderDraftVariant, variantFromRow } from '@/components/orders/orderDraft';
 
 interface LensTypeOption {
   id: string;
@@ -54,6 +54,22 @@ function uniqueOptions(values: Array<string | null>) {
   return [...new Set(values.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
+function sameTreatment(a: string, b: string) {
+  return normalizeTreatmentName(getTreatmentLabel(a)) === normalizeTreatmentName(getTreatmentLabel(b));
+}
+
+function uniqueTreatmentOptions(values: string[]) {
+  const byLabel = new Map<string, string>();
+
+  for (const value of values) {
+    const label = getTreatmentLabel(value);
+    const key = normalizeTreatmentName(label);
+    if (!byLabel.has(key)) byLabel.set(key, value);
+  }
+
+  return [...byLabel.values()].sort((a, b) => getTreatmentLabel(a).localeCompare(getTreatmentLabel(b), 'pt-BR'));
+}
+
 function parseOptionalNumber(value: string) {
   if (!value.trim()) return null;
   const parsed = Number(value.replace(',', '.'));
@@ -61,6 +77,7 @@ function parseOptionalNumber(value: string) {
 }
 
 function parseRequiredNumber(value: string) {
+  if (!value.trim()) return Number.NaN;
   const parsed = Number(value.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
@@ -111,7 +128,7 @@ function VariantCard({
           <span>SKU: <strong className="font-mono text-slate-200">{variant.sku}</strong></span>
           <span>Lado: <strong className="text-slate-200">{sideLabels[(variant.side as LensSide | null) || LensSide.NOT_APPLICABLE]}</strong></span>
           <span>Estoque: <strong className="text-slate-200">{variant.quantity_available} un</strong></span>
-          <span>Prazo: <strong className="text-slate-200">{availability.leadTime ? `${availability.leadTime} dias` : 'sob confirmacao'}</strong></span>
+          <span>Prazo: <strong className="text-slate-200">{formatLeadTime(availability.leadTime)}</strong></span>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -152,14 +169,14 @@ export function SpecialOrderForm({ lensTypes, variants }: SpecialOrderFormProps)
   const categories = useMemo(() => uniqueOptions(lensTypes.map((item) => item.category)), [lensTypes]);
   const materials = useMemo(() => uniqueOptions(lensTypes.map((item) => item.material)), [lensTypes]);
   const indices = useMemo(() => uniqueOptions(lensTypes.map((item) => item.refractive_index)), [lensTypes]);
-  const treatments = useMemo(() => uniqueOptions(lensTypes.flatMap((item) => item.treatments)), [lensTypes]);
+  const treatments = useMemo(() => uniqueTreatmentOptions(lensTypes.flatMap((item) => item.treatments)), [lensTypes]);
 
   const matchingLensTypes = useMemo(() => lensTypes.filter((lensType) => (
     (!brand || lensType.brand === brand)
     && (!category || lensType.category === category)
     && (!material || lensType.material === material)
     && (!refractiveIndex || lensType.refractive_index === refractiveIndex)
-    && selectedTreatments.every((treatment) => lensType.treatments.includes(treatment))
+    && selectedTreatments.every((treatment) => lensType.treatments.some((lensTreatment) => sameTreatment(lensTreatment, treatment)))
   )), [brand, category, lensTypes, material, refractiveIndex, selectedTreatments]);
 
   const selectedLensType = lensTypes.find((lensType) => lensType.id === selectedLensTypeId) || matchingLensTypes[0] || null;

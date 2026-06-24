@@ -17,6 +17,7 @@ import {
   AVAILABILITY_FILTER_OPTIONS,
   AvailabilityFilter,
   formatGrade,
+  formatLeadTime,
   matchesAvailabilityFilter,
   ORDER_DRAFT_STORAGE_KEY,
   OrderDraftItem,
@@ -387,7 +388,7 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
                         ))}
                       </div>
                       <p className="mt-2 text-[0.8rem] font-medium text-slate-400">
-                        {availability.description} Prazo: {availability.leadTime ? `${availability.leadTime} dias` : 'sob confirmacao'}.
+                        {availability.description} Prazo: {formatLeadTime(availability.leadTime)}.
                       </p>
                     </div>
                     <Button

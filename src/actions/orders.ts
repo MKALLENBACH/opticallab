@@ -20,7 +20,7 @@ const storeOrderPayloadSchema = z.object({
 });
 
 const lensPowerSchema = z.object({
-  sphere_esf: z.number().min(-30, 'ESF deve estar entre -30.00 e +30.00.').max(30, 'ESF deve estar entre -30.00 e +30.00.'),
+  sphere_esf: z.number({ error: 'Informe o ESF da lente.' }).min(-30, 'ESF deve estar entre -30.00 e +30.00.').max(30, 'ESF deve estar entre -30.00 e +30.00.'),
   cylinder_cil: z.number().min(-10, 'CIL deve estar entre -10.00 e +10.00.').max(10, 'CIL deve estar entre -10.00 e +10.00.').nullable().optional(),
   axis: z.number().int().min(0, 'Eixo deve estar entre 0 e 180.').max(180, 'Eixo deve estar entre 0 e 180.').nullable().optional(),
   addition_add: z.number().min(0, 'ADD deve estar entre 0.00 e +4.00.').max(4, 'ADD deve estar entre 0.00 e +4.00.').nullable().optional(),

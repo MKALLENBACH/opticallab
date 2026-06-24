@@ -40,6 +40,17 @@ function formatGrade(row: StockData): string {
   return [esf, cil, axis, add].filter(Boolean).join(' / ') || 'Plano';
 }
 
+function formatLeadTime(value: number | null): string {
+  if (value === 0) return 'Pronta entrega';
+  return value ? `${value} dias` : 'sob confirmacao';
+}
+
+function formatStockLeadTime(row: StockData): string {
+  return row.quantity_available > 0
+    ? formatLeadTime(row.delivery_time_in_stock_days)
+    : formatLeadTime(row.production_time_out_of_stock_days);
+}
+
 export function StockTable({ data }: { data: StockData[] }) {
   return (
     <ResponsiveDataTable
@@ -85,7 +96,7 @@ export function StockTable({ data }: { data: StockData[] }) {
         },
         {
           header: 'Prazo',
-          accessor: (row) => `${row.delivery_time_in_stock_days ?? '-'}d / ${row.production_time_out_of_stock_days ?? '-'}d`,
+          accessor: (row) => formatStockLeadTime(row),
           align: 'right',
         },
         {

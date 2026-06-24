@@ -15,6 +15,7 @@ import {
   AVAILABILITY_FILTER_OPTIONS,
   AvailabilityFilter,
   formatGrade,
+  formatLeadTime,
   matchesAvailabilityFilter,
   ORDER_DRAFT_STORAGE_KEY,
   OrderDraftItem,
@@ -262,7 +263,7 @@ export function StoreSearchClient() {
                     <span>SKU: <strong className="font-mono text-slate-200">{variant.sku}</strong></span>
                     <span>Qtd: <strong className="text-slate-200">{variant.quantity_available} un</strong></span>
                     <span className="col-span-2">
-                      Prazo: <strong className="text-slate-200">{availability.leadTime ? `${availability.leadTime} dias` : 'sob confirmacao'}</strong>
+                      Prazo: <strong className="text-slate-200">{formatLeadTime(availability.leadTime)}</strong>
                     </span>
                   </div>
 
@@ -278,7 +279,7 @@ export function StoreSearchClient() {
 
                   <p className="min-h-10 text-[0.82rem] font-medium text-slate-400">
                     {availability.state === 'backorder'
-                      ? `Sem pronta entrega. Prazo estimado de producao: ${availability.leadTime ?? 'sob confirmacao'} dias.`
+                      ? `Sem pronta entrega. Prazo estimado de producao: ${formatLeadTime(availability.leadTime)}.`
                       : availability.description}
                   </p>
 

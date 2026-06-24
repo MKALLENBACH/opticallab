@@ -116,6 +116,11 @@ export function availabilityFor(variant: OrderDraftVariant) {
   };
 }
 
+export function formatLeadTime(leadTime: number | null | undefined) {
+  if (leadTime === 0) return 'Pronta entrega';
+  return leadTime ? `${leadTime} dias` : 'sob confirmacao';
+}
+
 export function matchesAvailabilityFilter(variant: OrderDraftVariant, filter: AvailabilityFilter) {
   if (filter === 'all') return true;
 
