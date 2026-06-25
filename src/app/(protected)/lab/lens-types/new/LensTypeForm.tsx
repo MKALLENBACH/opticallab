@@ -2,30 +2,24 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock3, FileText, Glasses, Layers3, Plus, Save, X } from 'lucide-react';
+import { Clock3, FileText, Glasses, Layers3, Save } from 'lucide-react';
 import { createLensTypeAction, updateLensTypeAction } from '@/actions/lens-types';
-import { createLensTreatmentOption } from '@/actions/lens-treatment-options';
+import { LabOptionMultiSelect, LabOptionSelect } from '@/components/ui/LabOptionSelect';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { ChipSelector, OptionChip } from '@/components/ui/OptionChip';
 import { FormActions, FormSection } from '@/components/ui/Premium';
-import {
-  mergeTreatmentOptions,
-  normalizeTreatmentName,
-  OTHER_TREATMENT_OPTION,
-  type TreatmentOption,
-} from '@/lib/constants/treatments';
-import { EntityStatus, LensCategory, LensMaterial, RefractiveIndex } from '@/lib/types/enums';
+import { type LabOption } from '@/lib/constants/lab-options';
+import { EntityStatus } from '@/lib/types/enums';
 
 interface LensTypeFormData {
   id: string;
   name: string;
   brand: string | null;
   model: string | null;
-  category: LensCategory | null;
-  material: LensMaterial | null;
-  refractive_index: RefractiveIndex | null;
+  category: string | null;
+  material: string | null;
+  refractive_index: string | null;
   treatments: string[];
   allow_order_when_out_of_stock: boolean | null;
   default_delivery_time_in_stock_days: number | null;
@@ -35,7 +29,13 @@ interface LensTypeFormData {
 }
 
 interface LensTypeFormProps {
-  treatmentOptions: TreatmentOption[];
+  optionGroups: {
+    brand: LabOption[];
+    lens_category: LabOption[];
+    lens_material: LabOption[];
+    refractive_index: LabOption[];
+    lens_treatment: LabOption[];
+  };
   initialData?: LensTypeFormData;
   mode?: 'create' | 'edit';
 }
@@ -52,64 +52,13 @@ function optionalInt(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function LensTypeForm({ treatmentOptions, initialData, mode = 'create' }: LensTypeFormProps) {
+export function LensTypeForm({ optionGroups, initialData, mode = 'create' }: LensTypeFormProps) {
   const router = useRouter();
   const isEditing = mode === 'edit' && Boolean(initialData);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCreatingTreatment, setIsCreatingTreatment] = useState(false);
-  const [isAddingCustomTreatment, setIsAddingCustomTreatment] = useState(false);
-  const [newTreatmentName, setNewTreatmentName] = useState('');
-  const [treatmentError, setTreatmentError] = useState<string | null>(null);
-  const [treatmentMessage, setTreatmentMessage] = useState<string | null>(null);
-  const [availableTreatmentOptions, setAvailableTreatmentOptions] = useState<TreatmentOption[]>(
-    mergeTreatmentOptions(treatmentOptions)
-  );
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>(initialData?.treatments || []);
-
-  const toggleTreatment = (id: string) => {
-    setSelectedTreatments((current) =>
-      current.includes(id) ? current.filter((treatment) => treatment !== id) : [...current, id]
-    );
-  };
-
-  const addTreatmentOption = (option: TreatmentOption) => {
-    setAvailableTreatmentOptions((current) => mergeTreatmentOptions([...current, option]));
-    setSelectedTreatments((current) => (
-      current.some((value) => normalizeTreatmentName(value) === normalizeTreatmentName(option.value))
-        ? current
-        : [...current, option.value]
-    ));
-  };
-
-  const handleAddCustomTreatment = async () => {
-    setTreatmentError(null);
-    setTreatmentMessage(null);
-
-    if (!newTreatmentName.trim()) {
-      setTreatmentError('Informe o nome do tratamento.');
-      return;
-    }
-
-    setIsCreatingTreatment(true);
-    const result = await createLensTreatmentOption(newTreatmentName);
-    setIsCreatingTreatment(false);
-
-    if (result.error || !result.option) {
-      setTreatmentError(result.error || 'Nao foi possivel adicionar o tratamento.');
-      return;
-    }
-
-    addTreatmentOption({
-      value: result.option.value,
-      label: result.option.label,
-      isDefault: false,
-    });
-    setNewTreatmentName('');
-    setIsAddingCustomTreatment(false);
-    setTreatmentMessage(result.option.message);
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -122,9 +71,9 @@ export function LensTypeForm({ treatmentOptions, initialData, mode = 'create' }:
       name: String(formData.get('name') || '').trim(),
       brand: optionalText(formData.get('brand')),
       model: optionalText(formData.get('model')),
-      category: (formData.get('category') as LensCategory) || null,
-      material: (formData.get('material') as LensMaterial) || null,
-      refractive_index: (formData.get('refractive_index') as RefractiveIndex) || null,
+      category: optionalText(formData.get('category')),
+      material: optionalText(formData.get('material')),
+      refractive_index: optionalText(formData.get('refractive_index')),
       treatments: selectedTreatments,
       allow_order_when_out_of_stock: formData.get('allow_order_when_out_of_stock') === 'on',
       default_delivery_time_in_stock_days: optionalInt(formData.get('default_delivery_time_in_stock_days')),
@@ -174,50 +123,43 @@ export function LensTypeForm({ treatmentOptions, initialData, mode = 'create' }:
                 placeholder="Ex: Visao Simples AR"
                 disabled={isLoading}
               />
-              <Input label="Marca" name="brand" defaultValue={initialData?.brand || ''} placeholder="Ex: Zeiss, Essilor" disabled={isLoading} />
+              <LabOptionSelect
+                label="Marca"
+                name="brand"
+                optionType="brand"
+                options={optionGroups.brand}
+                defaultValue={initialData?.brand || ''}
+                disabled={isLoading}
+                placeholder="Selecione ou cadastre..."
+              />
               <Input label="Modelo" name="model" defaultValue={initialData?.model || ''} placeholder="Ex: Crizal Forte" disabled={isLoading} />
 
-              <div className="flex flex-col gap-2">
-                <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Categoria</label>
-                <select name="category" defaultValue={initialData?.category || ''} disabled={isLoading}>
-                  <option value="">Selecione...</option>
-                  <option value={LensCategory.MONOFOCAL}>Monofocal</option>
-                  <option value={LensCategory.BIFOCAL}>Bifocal</option>
-                  <option value={LensCategory.MULTIFOCAL_PROGRESSIVA}>Multifocal / Progressiva</option>
-                  <option value={LensCategory.OCUPACIONAL}>Ocupacional</option>
-                  <option value={LensCategory.SOLAR_GRAU}>Solar com grau</option>
-                  <option value={LensCategory.TRATAMENTO_ESPECIAL}>Tratamento especial</option>
-                  <option value={LensCategory.OUTRO}>Outro</option>
-                </select>
-              </div>
+              <LabOptionSelect
+                label="Categoria"
+                name="category"
+                optionType="lens_category"
+                options={optionGroups.lens_category}
+                defaultValue={initialData?.category || ''}
+                disabled={isLoading}
+              />
 
-              <div className="flex flex-col gap-2">
-                <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Material</label>
-                <select name="material" defaultValue={initialData?.material || ''} disabled={isLoading}>
-                  <option value="">Selecione...</option>
-                  <option value={LensMaterial.CR39}>CR-39</option>
-                  <option value={LensMaterial.POLICARBONATO}>Policarbonato</option>
-                  <option value={LensMaterial.TRIVEX}>Trivex</option>
-                  <option value={LensMaterial.RESINA}>Resina</option>
-                  <option value={LensMaterial.ALTO_INDICE}>Alto indice</option>
-                  <option value={LensMaterial.MINERAL}>Mineral</option>
-                  <option value={LensMaterial.OUTRO}>Outro</option>
-                </select>
-              </div>
+              <LabOptionSelect
+                label="Material"
+                name="material"
+                optionType="lens_material"
+                options={optionGroups.lens_material}
+                defaultValue={initialData?.material || ''}
+                disabled={isLoading}
+              />
 
-              <div className="flex flex-col gap-2">
-                <label className="ml-1 text-[0.86rem] font-bold text-slate-200">Indice de refracao</label>
-                <select name="refractive_index" defaultValue={initialData?.refractive_index || ''} disabled={isLoading}>
-                  <option value="">Selecione...</option>
-                  <option value={RefractiveIndex.R_1_49}>1.49</option>
-                  <option value={RefractiveIndex.R_1_56}>1.56</option>
-                  <option value={RefractiveIndex.R_1_59}>1.59</option>
-                  <option value={RefractiveIndex.R_1_60}>1.60</option>
-                  <option value={RefractiveIndex.R_1_67}>1.67</option>
-                  <option value={RefractiveIndex.R_1_74}>1.74</option>
-                  <option value={RefractiveIndex.OUTRO}>Outro</option>
-                </select>
-              </div>
+              <LabOptionSelect
+                label="Indice de refracao"
+                name="refractive_index"
+                optionType="refractive_index"
+                options={optionGroups.refractive_index}
+                defaultValue={initialData?.refractive_index || ''}
+                disabled={isLoading}
+              />
             </div>
           </FormSection>
 
@@ -226,67 +168,13 @@ export function LensTypeForm({ treatmentOptions, initialData, mode = 'create' }:
             title="Tratamentos inclusos"
             description="Selecione todos os tratamentos que ja fazem parte desta lente."
           >
-            <div className="flex flex-wrap gap-2.5">
-              <ChipSelector
-                options={availableTreatmentOptions}
-                selectedValues={selectedTreatments}
-                onToggle={toggleTreatment}
-                disabled={isLoading || isCreatingTreatment}
-              />
-              <OptionChip
-                value={OTHER_TREATMENT_OPTION.value}
-                selected={isAddingCustomTreatment}
-                disabled={isLoading || isCreatingTreatment}
-                onClick={() => {
-                  setIsAddingCustomTreatment((current) => !current);
-                  setTreatmentError(null);
-                  setTreatmentMessage(null);
-                }}
-              >
-                {OTHER_TREATMENT_OPTION.label}
-              </OptionChip>
-            </div>
-
-            {isAddingCustomTreatment && (
-              <div className="mt-4 rounded-2xl border border-violet-300/18 bg-violet-500/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto_auto] lg:items-end">
-                  <Input
-                    label="Nome do novo tratamento"
-                    value={newTreatmentName}
-                    onChange={(event) => setNewTreatmentName(event.target.value)}
-                    placeholder="Ex: Antirrisco premium"
-                    disabled={isCreatingTreatment}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isCreatingTreatment}
-                    onClick={() => {
-                      setIsAddingCustomTreatment(false);
-                      setNewTreatmentName('');
-                      setTreatmentError(null);
-                    }}
-                    leftIcon={<X size={16} />}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="button"
-                    isLoading={isCreatingTreatment}
-                    onClick={handleAddCustomTreatment}
-                    leftIcon={<Plus size={16} />}
-                  >
-                    Adicionar tratamento
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {(treatmentError || treatmentMessage) && (
-              <div className={`mt-3 rounded-2xl border px-4 py-3 text-[0.88rem] font-semibold ${treatmentError ? 'border-red-400/25 bg-red-500/12 text-red-100' : 'border-emerald-400/25 bg-emerald-500/12 text-emerald-100'}`}>
-                {treatmentError || treatmentMessage}
-              </div>
-            )}
+            <LabOptionMultiSelect
+              optionType="lens_treatment"
+              options={optionGroups.lens_treatment}
+              selectedValues={selectedTreatments}
+              onChange={setSelectedTreatments}
+              disabled={isLoading}
+            />
           </FormSection>
 
           <FormSection

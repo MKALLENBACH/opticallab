@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PackageSearch, Search, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PackageSearch, Search, ShoppingCart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -25,6 +25,8 @@ import {
   variantFromRow,
 } from './orderDraft';
 import { OrderPriority } from '@/lib/types/enums';
+
+const SEARCH_PAGE_SIZE = 10;
 
 function readDraft(): StoredOrderDraft {
   if (typeof window === 'undefined') {
@@ -64,15 +66,18 @@ export function StoreSearchClient() {
   const [query, setQuery] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>('all');
   const [results, setResults] = useState<OrderDraftVariant[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const lastSearchRef = useRef('');
 
-  const runSearch = useCallback(async (value: string, force = false) => {
+  const runSearch = useCallback(async (value: string, force = false, pageToLoad = page) => {
     const terms = searchTerms(value);
-    const normalized = `${availabilityFilter}:${terms.join(' ') || 'all'}`;
+    const safePage = Math.max(1, pageToLoad);
+    const normalized = `${availabilityFilter}:${terms.join(' ') || 'all'}:${safePage}`;
 
     if (!force && normalized === lastSearchRef.current) return;
 
@@ -83,6 +88,9 @@ export function StoreSearchClient() {
     setIsLoading(true);
     setHasSearched(true);
     setMessage(null);
+
+    const from = (safePage - 1) * SEARCH_PAGE_SIZE;
+    const to = from + SEARCH_PAGE_SIZE - 1;
 
     let request = supabase
       .from('lens_variants')
@@ -111,40 +119,45 @@ export function StoreSearchClient() {
           default_delivery_time_in_stock_days,
           default_production_time_out_of_stock_days
         )
-      `)
+      `, { count: 'exact' })
       .eq('status', 'active')
       .eq('lens_type.status', 'active')
       .order('quantity_available', { ascending: false })
-      .order('sku', { ascending: true });
+      .order('sku', { ascending: true })
+      .range(from, to);
 
     if (availabilityFilter === 'in_stock') {
       request = request.gt('quantity_available', 0);
     }
 
     if (availabilityFilter === 'backorder') {
-      request = request.lte('quantity_available', 0);
+      request = request
+        .lte('quantity_available', 0)
+        .or('allow_order_when_out_of_stock.is.null,allow_order_when_out_of_stock.eq.true', { referencedTable: 'lens_type' });
     }
 
     for (const term of terms) {
       request = request.ilike('searchable_text', `%${term}%`);
     }
 
-    const { data, error } = await request;
+    const { data, error, count } = await request;
 
     if (requestId !== requestIdRef.current) return;
 
     if (error) {
       console.error(error);
       setResults([]);
+      setTotalResults(0);
       setMessage('Nao foi possivel buscar lentes agora. Tente novamente.');
     } else {
       setResults((data || [])
         .map((row) => variantFromRow(row as Record<string, unknown>))
         .filter((variant) => matchesAvailabilityFilter(variant, availabilityFilter)));
+      setTotalResults(count || 0);
     }
 
     setIsLoading(false);
-  }, [availabilityFilter, supabase]);
+  }, [availabilityFilter, page, supabase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -152,11 +165,12 @@ export function StoreSearchClient() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [availabilityFilter, query, runSearch]);
+  }, [availabilityFilter, page, query, runSearch]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await runSearch(query, true);
+    setPage(1);
+    await runSearch(query, true, 1);
   };
 
   const addToDraft = (variant: OrderDraftVariant) => {
@@ -194,7 +208,10 @@ export function StoreSearchClient() {
           <Input
             name="query"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
             placeholder="Ex: LL-VS -2 antirreflexo"
             leftIcon={<Search size={17} />}
             className="flex-1"
@@ -210,7 +227,10 @@ export function StoreSearchClient() {
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setAvailabilityFilter(option.value)}
+                onClick={() => {
+                  setAvailabilityFilter(option.value);
+                  setPage(1);
+                }}
                 className={`min-h-10 rounded-2xl border px-4 text-[0.84rem] font-extrabold transition-all ${
                   isActive
                     ? 'border-violet-300/40 bg-violet-500/18 text-white shadow-[0_0_24px_rgba(139,92,246,0.16)]'
@@ -226,7 +246,7 @@ export function StoreSearchClient() {
           <p className="mt-3 text-[0.82rem] font-semibold text-slate-500">
             {isLoading
               ? 'Carregando catalogo...'
-              : `Mostrando ${results.length} ${results.length === 1 ? 'item' : 'itens'}${query.trim() ? ' encontrados' : ' cadastrados'}.`}
+              : `Mostrando ${results.length} de ${totalResults} ${totalResults === 1 ? 'item' : 'itens'}${query.trim() ? ' encontrados' : ' cadastrados'}.`}
           </p>
         )}
         {message && (
@@ -301,6 +321,34 @@ export function StoreSearchClient() {
             );
           })}
         </section>
+      )}
+
+      {hasSearched && totalResults > SEARCH_PAGE_SIZE && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-[0.84rem] font-semibold text-slate-400">
+            Pagina <strong className="text-slate-200">{page}</strong> de <strong className="text-slate-200">{Math.ceil(totalResults / SEARCH_PAGE_SIZE)}</strong>
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={page <= 1 || isLoading}
+              leftIcon={<ChevronLeft size={16} />}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={page >= Math.ceil(totalResults / SEARCH_PAGE_SIZE) || isLoading}
+              rightIcon={<ChevronRight size={16} />}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Proxima
+            </Button>
+          </div>
+        </div>
       )}
 
       {hasSearched && results.length === 0 && !isLoading && (

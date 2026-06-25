@@ -4,6 +4,7 @@ import { ReworkOrderForm } from '@/components/orders/ReworkOrderForm';
 import { EmptyState, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { createClient } from '@/lib/supabase/server';
 import { variantFromRow } from '@/components/orders/orderDraft';
+import { getLabCustomOptions } from '@/lib/data/lab-custom-options';
 
 export const metadata = { title: 'Abrir Retrabalho | LenteLink' };
 
@@ -60,7 +61,7 @@ export default async function StoreReworkOrderPage({ params }: { params: Promise
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('lab_id, optical_store_id')
+    .select('id, lab_id, optical_store_id')
     .eq('auth_user_id', userData.user.id)
     .single();
 
@@ -76,7 +77,7 @@ export default async function StoreReworkOrderPage({ params }: { params: Promise
     labId = store?.lab_id ?? null;
   }
 
-  if (!labId || !storeId) notFound();
+  if (!profile?.id || !labId || !storeId) notFound();
 
   const { data: order } = await supabase
     .from('orders')
@@ -122,7 +123,7 @@ export default async function StoreReworkOrderPage({ params }: { params: Promise
     );
   }
 
-  const [{ data: items }, variants] = await Promise.all([
+  const [{ data: items }, variants, customOptions] = await Promise.all([
     supabase
       .from('order_items')
       .select(`
@@ -143,11 +144,14 @@ export default async function StoreReworkOrderPage({ params }: { params: Promise
       .eq('lab_id', labId)
       .order('created_at', { ascending: true }),
     fetchVariants(supabase, labId),
+    getLabCustomOptions(['rework_reason'], labId),
   ]);
 
   return (
     <ReworkOrderForm
       actor="store"
+      labId={labId}
+      profileId={profile.id}
       parentOrder={{ ...order, optical_store: normalizeRelation(order.optical_store) }}
       items={(items || []).map((item) => ({
         ...item,
@@ -155,6 +159,7 @@ export default async function StoreReworkOrderPage({ params }: { params: Promise
         lens_variant: normalizeRelation(item.lens_variant),
       }))}
       variants={variants}
+      reworkReasonOptions={customOptions.rework_reason || []}
     />
   );
 }

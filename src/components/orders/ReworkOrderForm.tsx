@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Check, RefreshCw, Search, X } from 'lucide-react';
 import { createReworkOrderAction } from '@/actions/orders';
+import { PrescriptionAttachmentUpload, type PendingPrescriptionAttachment } from '@/components/orders/PrescriptionAttachmentUpload';
+import { LabOptionSelect } from '@/components/ui/LabOptionSelect';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,6 +13,7 @@ import { EmptyState, InfoRow, PageHeader, SectionCard, StatusBadge } from '@/com
 import { LensSide } from '@/lib/types/enums';
 import { getTreatmentLabel } from '@/lib/constants/treatments';
 import { formatDateTime } from '@/lib/format/date';
+import type { LabOption } from '@/lib/constants/lab-options';
 import { availabilityFor, formatGrade, formatLeadTime, type OrderDraftVariant, variantFromRow } from '@/components/orders/orderDraft';
 
 type ReworkAction = 'same_lens' | 'replace_sku' | 'special';
@@ -66,6 +69,9 @@ interface ReworkOrderFormProps {
   parentOrder: ReworkParentOrder;
   items: ReworkSourceItem[];
   variants: OrderDraftVariant[];
+  labId: string;
+  profileId: string;
+  reworkReasonOptions: LabOption[];
 }
 
 const sideLabels: Record<string, string> = {
@@ -120,13 +126,15 @@ function defaultConfig(item: ReworkSourceItem): ItemConfig {
   };
 }
 
-export function ReworkOrderForm({ actor, parentOrder, items, variants }: ReworkOrderFormProps) {
+export function ReworkOrderForm({ actor, parentOrder, items, variants, labId, profileId, reworkReasonOptions }: ReworkOrderFormProps) {
   const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [configs, setConfigs] = useState<Record<string, ItemConfig>>(() => (
     Object.fromEntries(items.map((item) => [item.id, defaultConfig(item)]))
   ));
   const [notes, setNotes] = useState('');
+  const [reason, setReason] = useState(reworkReasonOptions[0]?.value || 'erro_de_medico');
+  const [prescription, setPrescription] = useState<PendingPrescriptionAttachment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [matches, setMatches] = useState<{ sourceItemId: string; variants: OrderDraftVariant[] } | null>(null);
@@ -152,8 +160,9 @@ export function ReworkOrderForm({ actor, parentOrder, items, variants }: ReworkO
     useVariantForSource?: { sourceItemId: string; variantId: string }
   ) => ({
     parent_order_id: parentOrder.id,
-    reason: 'erro_de_medico' as const,
+    reason,
     notes: notes || null,
+    prescription,
     items: selectedItems.map((itemId) => {
       const item = items.find((entry) => entry.id === itemId)!;
       const config = configs[itemId];
@@ -189,6 +198,12 @@ export function ReworkOrderForm({ actor, parentOrder, items, variants }: ReworkO
     useVariantForSource?: { sourceItemId: string; variantId: string }
   ) => {
     setError(null);
+
+    if (actor === 'store' && !prescription) {
+      setError('Anexe a receita para continuar.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const result = await createReworkOrderAction(buildPayload(forceSpecialForSource, useVariantForSource));
@@ -236,18 +251,32 @@ export function ReworkOrderForm({ actor, parentOrder, items, variants }: ReworkO
         </div>
       </SectionCard>
 
-      <SectionCard icon={AlertTriangle} title="Motivo e observacoes" description="Neste momento, o motivo disponivel e Erro de Medico.">
+      <SectionCard icon={AlertTriangle} title="Motivo e observacoes" description="Selecione o motivo do retrabalho e registre o contexto da solicitacao.">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-          <label className="flex flex-col gap-2 text-[0.84rem] font-bold text-slate-200">
-            Motivo
-            <select
-              value="erro_de_medico"
-              className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/62 px-3 text-white outline-none"
-              disabled
-            >
-              <option value="erro_de_medico">Erro de Medico</option>
-            </select>
-          </label>
+          {actor === 'lab' ? (
+            <LabOptionSelect
+              label="Motivo"
+              optionType="rework_reason"
+              options={reworkReasonOptions}
+              value={reason}
+              onChange={setReason}
+              disabled={isSubmitting}
+            />
+          ) : (
+            <label className="flex flex-col gap-2 text-[0.84rem] font-bold text-slate-200">
+              Motivo
+              <select
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/62 px-3 text-white outline-none"
+                disabled={isSubmitting}
+              >
+                {reworkReasonOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="flex flex-col gap-2 text-[0.84rem] font-bold text-slate-200">
             Observacoes {actor === 'store' ? '(obrigatorio)' : '(opcional)'}
@@ -261,6 +290,15 @@ export function ReworkOrderForm({ actor, parentOrder, items, variants }: ReworkO
           </label>
         </div>
       </SectionCard>
+
+      <PrescriptionAttachmentUpload
+        labId={labId}
+        profileId={profileId}
+        value={prescription}
+        onChange={setPrescription}
+        required={actor === 'store'}
+        disabled={isSubmitting}
+      />
 
       <SectionCard icon={Search} title="Itens do retrabalho" description="Selecione um ou mais itens do pedido original e escolha como cada lente sera refeita.">
         {!items.length ? (

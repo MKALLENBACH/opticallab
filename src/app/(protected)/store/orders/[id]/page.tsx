@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { StoreOrderDetailActions } from '@/components/orders/OrderDetailActions';
 import { OrderDetailView, type OrderDetailData, type OrderHistoryDetail, type OrderItemDetail } from '@/components/orders/OrderDetailView';
 import { createClient } from '@/lib/supabase/server';
+import { getOrderAttachmentViews } from '@/lib/data/order-attachments';
 
 export const metadata = { title: 'Detalhe do Pedido | LenteLink' };
 
@@ -61,7 +62,7 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
 
   if (!order) notFound();
 
-  const [{ data: items }, { data: history }, { data: parentOrder }, { data: linkedReworks }] = await Promise.all([
+  const [{ data: items }, { data: history }, { data: parentOrder }, { data: linkedReworks }, attachments] = await Promise.all([
     supabase
       .from('order_items')
       .select(`
@@ -104,6 +105,7 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
       .eq('optical_store_id', storeId)
       .eq('order_type', 'rework')
       .order('created_at', { ascending: false }),
+    getOrderAttachmentViews(id, labId),
   ]);
 
   const profileIds = Array.from(new Set((history || []).map((entry) => entry.changed_by_profile_id).filter(Boolean)));
@@ -117,6 +119,7 @@ export default async function StoreOrderDetailPage({ params }: { params: Promise
     optical_store: normalizeRelation(order.optical_store),
     parent_order: parentOrder || null,
     linked_reworks: linkedReworks || [],
+    attachments,
   } as OrderDetailData;
 
   const typedItems = (items || []).map((item) => ({

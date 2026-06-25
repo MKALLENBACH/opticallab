@@ -1,11 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
 import { OrdersTable, type OrderTableRow } from '@/components/orders/OrdersTable';
+import { PaginationControls, paginationRange } from '@/components/ui/PaginationControls';
 import { PageHeader, SectionCard } from '@/components/ui/Premium';
 import { ClipboardList } from 'lucide-react';
 
 export const metadata = { title: 'Pedidos | LenteLink' };
 
-export default async function LabOrdersPage() {
+export default async function LabOrdersPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams;
+  const pagination = paginationRange(Number(pageParam || 1), 10);
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
@@ -27,7 +30,7 @@ export default async function LabOrdersPage() {
     );
   }
 
-  const { data: orders, error } = await supabase
+  const { data: orders, error, count } = await supabase
     .from('orders')
     .select(`
       id,
@@ -41,9 +44,10 @@ export default async function LabOrdersPage() {
       created_at,
       optical_store:optical_stores(name),
       items:order_items(id)
-    `)
+    `, { count: 'exact' })
     .eq('lab_id', labId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(pagination.from, pagination.to);
 
   if (error) {
     console.error('Error fetching orders:', error);
@@ -70,6 +74,7 @@ export default async function LabOrdersPage() {
         contentClassName="p-0"
       >
         <OrdersTable data={typedOrders} variant="lab" />
+        <PaginationControls page={pagination.page} pageSize={pagination.pageSize} total={count || 0} pathname="/lab/orders" />
       </SectionCard>
     </div>
   );

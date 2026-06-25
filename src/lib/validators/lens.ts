@@ -1,13 +1,13 @@
 import { z } from 'zod';
-import { EntityStatus, LensCategory, LensMaterial, RefractiveIndex, LensSide } from '../types/enums';
+import { EntityStatus, LensSide } from '../types/enums';
 
 export const lensTypeSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório'),
   brand: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
-  category: z.nativeEnum(LensCategory).nullable().optional(),
-  material: z.nativeEnum(LensMaterial).nullable().optional(),
-  refractive_index: z.nativeEnum(RefractiveIndex).nullable().optional(),
+  category: z.string().nullable().optional(),
+  material: z.string().nullable().optional(),
+  refractive_index: z.string().nullable().optional(),
   treatments: z.array(z.string()).default([]),
   allow_order_when_out_of_stock: z.boolean().nullable().optional(),
   default_delivery_time_in_stock_days: z.number().int().min(0).nullable().optional(),

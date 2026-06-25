@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { canTransitionStatus } from '@/lib/constants/order-flow';
 import { EntityStatus, LensSide, OrderPriority, OrderStatus, UserRole } from '@/lib/types/enums';
+import { DEFAULT_REWORK_REASON_OPTIONS, normalizeCustomOption } from '@/lib/constants/lab-options';
 
 const orderBuilderItemSchema = z.object({
   lens_variant_id: z.string().uuid('Lente invalida.'),
@@ -12,11 +13,19 @@ const orderBuilderItemSchema = z.object({
   item_notes: z.string().trim().max(1000).nullable().optional(),
 });
 
+const pendingPrescriptionSchema = z.object({
+  file_path: z.string().trim().min(1, 'Anexe a receita para continuar.'),
+  file_name: z.string().trim().min(1, 'Arquivo invalido.'),
+  file_type: z.string().trim().min(1, 'Arquivo invalido.'),
+  file_size: z.number().int().min(1).max(10 * 1024 * 1024, 'Arquivo muito grande. Envie um arquivo de ate 10MB.'),
+});
+
 const storeOrderPayloadSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   priority: z.nativeEnum(OrderPriority).default(OrderPriority.NORMAL),
   desired_delivery_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   items: z.array(orderBuilderItemSchema).min(1, 'Adicione pelo menos uma lente ao pedido.'),
+  prescription: pendingPrescriptionSchema.nullable().optional(),
 });
 
 const lensPowerSchema = z.object({
@@ -37,6 +46,7 @@ const specialOrderPayloadSchema = z.object({
   left_power: lensPowerSchema.nullable().optional(),
   single_power: lensPowerSchema.nullable().optional(),
   force_special: z.boolean().default(false),
+  prescription: pendingPrescriptionSchema.nullable().optional(),
 }).superRefine((value, ctx) => {
   if (value.side === LensSide.PAIR) {
     if (!value.right_power) {
@@ -98,9 +108,10 @@ const reworkItemPayloadSchema = z.object({
 
 const createReworkPayloadSchema = z.object({
   parent_order_id: z.string().uuid('Pedido original invalido.'),
-  reason: z.literal('erro_de_medico', { error: 'Selecione o motivo Erro de Medico.' }),
+  reason: z.string().trim().min(1, 'Selecione o motivo do retrabalho.').max(80),
   notes: z.string().trim().max(2000).nullable().optional(),
   items: z.array(reworkItemPayloadSchema).min(1, 'Selecione pelo menos um item para retrabalho.'),
+  prescription: pendingPrescriptionSchema.nullable().optional(),
 });
 
 const reworkRejectPayloadSchema = z.object({
@@ -169,6 +180,8 @@ type ReworkBuiltItem = {
   side: string | null;
   item_notes: string | null;
 };
+
+type PendingPrescription = z.infer<typeof pendingPrescriptionSchema>;
 
 type ProfileContext = {
   id: string;
@@ -465,6 +478,99 @@ function profileActor(profile: ProfileContext): 'lab' | 'optical' | null {
   return null;
 }
 
+const ALLOWED_PRESCRIPTION_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+const ALLOWED_PRESCRIPTION_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+
+function validatePendingPrescription(profile: ProfileContext, prescription: PendingPrescription | null | undefined, required: boolean) {
+  if (!prescription) {
+    return required ? 'Anexe a receita para continuar.' : null;
+  }
+
+  const lowerName = prescription.file_name.toLowerCase();
+  const hasAllowedExtension = ALLOWED_PRESCRIPTION_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
+  if (!ALLOWED_PRESCRIPTION_TYPES.has(prescription.file_type) || !hasAllowedExtension) {
+    return 'Formato invalido. Envie uma imagem ou PDF.';
+  }
+
+  if (prescription.file_size > 10 * 1024 * 1024) {
+    return 'Arquivo muito grande. Envie um arquivo de ate 10MB.';
+  }
+
+  const expectedPrefix = `${profile.lab_id}/pending/${profile.id}/`;
+  if (!prescription.file_path.startsWith(expectedPrefix) || prescription.file_path.includes('..')) {
+    return 'Nao foi possivel anexar a receita. Tente novamente.';
+  }
+
+  return null;
+}
+
+async function attachPrescriptionToOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profile: ProfileContext,
+  orderId: string,
+  prescription: PendingPrescription | null | undefined
+) {
+  if (!prescription) return { success: true };
+
+  const { error } = await supabase
+    .from('order_attachments')
+    .insert({
+      lab_id: profile.lab_id,
+      order_id: orderId,
+      uploaded_by_profile_id: profile.id,
+      attachment_type: 'prescription',
+      file_url: prescription.file_path,
+      file_path: prescription.file_path,
+      file_name: prescription.file_name,
+      file_type: prescription.file_type,
+      file_size: prescription.file_size,
+    });
+
+  if (error) return { error: 'Nao foi possivel registrar a receita no pedido.' };
+  return { success: true };
+}
+
+async function rollbackCreatedOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orderId: string,
+  prescription?: PendingPrescription | null
+) {
+  await supabase.from('orders').delete().eq('id', orderId);
+  if (prescription?.file_path) {
+    await supabase.storage.from('order-attachments').remove([prescription.file_path]);
+  }
+}
+
+async function validateReworkReason(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  labId: string,
+  reason: string
+) {
+  const normalizedReason = normalizeCustomOption(reason);
+  const defaultMatch = DEFAULT_REWORK_REASON_OPTIONS.some((option) => (
+    normalizeCustomOption(option.value) === normalizedReason
+    || normalizeCustomOption(option.label) === normalizedReason
+  ));
+
+  if (defaultMatch) return { value: reason };
+
+  const { data, error } = await supabase
+    .from('lab_custom_options')
+    .select('name')
+    .eq('lab_id', labId)
+    .eq('option_type', 'rework_reason')
+    .eq('status', EntityStatus.ACTIVE)
+    .eq('normalized_name', normalizedReason)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') {
+    return { error: 'Nao foi possivel validar o motivo do retrabalho.' };
+  }
+
+  if (!data?.name) return { error: 'Selecione um motivo de retrabalho disponivel para este laboratorio.' };
+  return { value: data.name };
+}
+
 async function validateStockForItems(
   supabase: Awaited<ReturnType<typeof createClient>>,
   labId: string,
@@ -611,6 +717,9 @@ export async function createStoreOrderAction(payload: StoreOrderPayload) {
     return { error: 'Apenas usuarios de otica podem criar pedidos por este fluxo.' };
   }
 
+  const prescriptionError = validatePendingPrescription(profile, parsed.data.prescription, true);
+  if (prescriptionError) return { error: prescriptionError };
+
   const validated = await validateStoreOrderItems(supabase, profile.lab_id, parsed.data.items);
   if (validated.error || !validated.items) return { error: validated.error || 'Itens invalidos.' };
 
@@ -662,7 +771,14 @@ export async function createStoreOrderAction(payload: StoreOrderPayload) {
   );
 
   if (itemsError) {
+    await rollbackCreatedOrder(supabase, order.id, parsed.data.prescription);
     return { error: 'Pedido criado, mas houve erro ao vincular os itens. Contate o laboratorio.' };
+  }
+
+  const attachmentResult = await attachPrescriptionToOrder(supabase, profile, order.id, parsed.data.prescription);
+  if (attachmentResult.error) {
+    await rollbackCreatedOrder(supabase, order.id, parsed.data.prescription);
+    return { error: attachmentResult.error };
   }
 
   await supabase.from('order_status_history').insert({
@@ -692,6 +808,9 @@ export async function createSpecialOrderAction(payload: SpecialOrderPayload) {
   if (!profile.optical_store_id || ![UserRole.OPTICAL_ADMIN, UserRole.OPTICAL_USER].includes(profile.role)) {
     return { error: 'Apenas usuarios de otica podem criar pedidos especiais.' };
   }
+
+  const prescriptionError = validatePendingPrescription(profile, parsed.data.prescription, true);
+  if (prescriptionError) return { error: prescriptionError };
 
   const specialItems = specialItemsFromPayload(parsed.data);
   const lensTypeResult = await validateSpecialLensType(supabase, profile.lab_id, parsed.data);
@@ -758,7 +877,14 @@ export async function createSpecialOrderAction(payload: SpecialOrderPayload) {
   );
 
   if (itemsError) {
+    await rollbackCreatedOrder(supabase, order.id, parsed.data.prescription);
     return { error: 'Pedido especial criado, mas houve erro ao vincular os dados da lente. Contate o laboratorio.' };
+  }
+
+  const attachmentResult = await attachPrescriptionToOrder(supabase, profile, order.id, parsed.data.prescription);
+  if (attachmentResult.error) {
+    await rollbackCreatedOrder(supabase, order.id, parsed.data.prescription);
+    return { error: attachmentResult.error };
   }
 
   await supabase.from('order_status_history').insert({
@@ -792,6 +918,12 @@ export async function createReworkOrderAction(payload: CreateReworkPayload) {
     return { error: 'Explique o que precisa ser refeito ou ajustado.' };
   }
 
+  const prescriptionError = validatePendingPrescription(profile, parsed.data.prescription, actor === 'optical');
+  if (prescriptionError) return { error: prescriptionError };
+
+  const reasonResult = await validateReworkReason(supabase, profile.lab_id, parsed.data.reason);
+  if (reasonResult.error || !reasonResult.value) return { error: reasonResult.error || 'Selecione o motivo do retrabalho.' };
+
   let parentQuery = supabase
     .from('orders')
     .select('id, lab_id, optical_store_id, order_number, status, priority, order_type')
@@ -819,7 +951,7 @@ export async function createReworkOrderAction(payload: CreateReworkPayload) {
     .eq('parent_order_id', parentOrder.id)
     .eq('order_type', 'rework')
     .eq('rework_opened_by_profile_id', profile.id)
-    .eq('rework_reason', parsed.data.reason)
+    .eq('rework_reason', reasonResult.value)
     .gte('created_at', recentIso)
     .limit(1);
 
@@ -1021,7 +1153,7 @@ export async function createReworkOrderAction(payload: CreateReworkPayload) {
       status: startsAccepted ? OrderStatus.CONFIRMADO : OrderStatus.AGUARDANDO_CONFIRMACAO,
       order_type: 'rework',
       parent_order_id: parentOrder.id,
-      rework_reason: parsed.data.reason,
+      rework_reason: reasonResult.value,
       rework_status: startsAccepted ? 'aceito' : 'aguardando_aceite',
       rework_opened_by_profile_id: profile.id,
       rework_opened_by_role: actor,
@@ -1060,11 +1192,23 @@ export async function createReworkOrderAction(payload: CreateReworkPayload) {
     }))
   );
 
-  if (itemsError) return { error: 'Retrabalho criado, mas houve erro ao vincular os itens. Contate o laboratorio.' };
+  if (itemsError) {
+    await rollbackCreatedOrder(supabase, order.id, parsed.data.prescription);
+    return { error: 'Retrabalho criado, mas houve erro ao vincular os itens. Contate o laboratorio.' };
+  }
+
+  const attachmentResult = await attachPrescriptionToOrder(supabase, profile, order.id, parsed.data.prescription);
+  if (attachmentResult.error) {
+    await rollbackCreatedOrder(supabase, order.id, parsed.data.prescription);
+    return { error: attachmentResult.error };
+  }
 
   if (startsAccepted) {
     const stockResult = await deductStockForOrder(supabase, profile.lab_id, profile.id, order.id, 'Retrabalho aberto pelo laboratorio');
-    if (stockResult.error) return { error: stockResult.error };
+    if (stockResult.error) {
+      await rollbackCreatedOrder(supabase, order.id, parsed.data.prescription);
+      return { error: stockResult.error };
+    }
   }
 
   await supabase.from('order_status_history').insert({

@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/ui/Premium';
-import { getAvailableTreatmentOptions } from '@/lib/data/lens-treatment-options';
+import { getLabCustomOptions } from '@/lib/data/lab-custom-options';
 import { createClient } from '@/lib/supabase/server';
-import { EntityStatus, LensCategory, LensMaterial, RefractiveIndex } from '@/lib/types/enums';
+import { EntityStatus } from '@/lib/types/enums';
 import { LensTypeForm } from '../new/LensTypeForm';
 
 export default async function EditLensTypePage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +26,7 @@ export default async function EditLensTypePage({ params }: { params: Promise<{ i
     );
   }
 
-  const [{ data: lens }, treatmentOptions] = await Promise.all([
+  const [{ data: lens }, optionGroups] = await Promise.all([
     supabase
       .from('lens_types')
       .select(`
@@ -47,16 +47,22 @@ export default async function EditLensTypePage({ params }: { params: Promise<{ i
       .eq('id', id)
       .eq('lab_id', profile.lab_id)
       .single(),
-    getAvailableTreatmentOptions(),
+    getLabCustomOptions([
+      'brand',
+      'lens_category',
+      'lens_material',
+      'refractive_index',
+      'lens_treatment',
+    ], profile.lab_id),
   ]);
 
   if (!lens) notFound();
 
   const initialData = {
     ...lens,
-    category: lens.category as LensCategory | null,
-    material: lens.material as LensMaterial | null,
-    refractive_index: lens.refractive_index as RefractiveIndex | null,
+    category: lens.category as string | null,
+    material: lens.material as string | null,
+    refractive_index: lens.refractive_index as string | null,
     treatments: (lens.treatments || []) as string[],
     status: lens.status as EntityStatus,
   };
@@ -70,7 +76,17 @@ export default async function EditLensTypePage({ params }: { params: Promise<{ i
         description="Atualize dados comerciais, tratamentos, status e prazos usados na busca das oticas."
       />
 
-      <LensTypeForm mode="edit" initialData={initialData} treatmentOptions={treatmentOptions} />
+      <LensTypeForm
+        mode="edit"
+        initialData={initialData}
+        optionGroups={{
+          brand: optionGroups.brand || [],
+          lens_category: optionGroups.lens_category || [],
+          lens_material: optionGroups.lens_material || [],
+          refractive_index: optionGroups.refractive_index || [],
+          lens_treatment: optionGroups.lens_treatment || [],
+        }}
+      />
     </div>
   );
 }

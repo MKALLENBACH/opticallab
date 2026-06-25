@@ -6,15 +6,15 @@ import { ResponsiveDataTable } from '@/components/data/ResponsiveDataTable';
 import { Badge } from '@/components/ui/Badge';
 import { StatusBadge } from '@/components/ui/Premium';
 import { getTreatmentLabel } from '@/lib/constants/treatments';
-import { EntityStatus, LensCategory, LensMaterial } from '@/lib/types/enums';
+import { EntityStatus } from '@/lib/types/enums';
 
 interface LensTypeData {
   id: string;
   name: string;
   brand: string | null;
   model: string | null;
-  category: LensCategory | null;
-  material: LensMaterial | null;
+  category: string | null;
+  material: string | null;
   treatments: string[];
   default_delivery_time_in_stock_days: number | null;
   default_production_time_out_of_stock_days: number | null;

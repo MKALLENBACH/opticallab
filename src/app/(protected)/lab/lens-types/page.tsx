@@ -1,13 +1,16 @@
 import { createClient } from '@/lib/supabase/server';
 import { LensTypesTable } from './LensTypesTable';
-import { EntityStatus, LensCategory, LensMaterial } from '@/lib/types/enums';
+import { EntityStatus } from '@/lib/types/enums';
 import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { Glasses, Plus } from 'lucide-react';
+import { PaginationControls, paginationRange } from '@/components/ui/PaginationControls';
 
 export const metadata = { title: 'Catalogo de Lentes | LenteLink' };
 
-export default async function LabLensTypesPage() {
+export default async function LabLensTypesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const pagination = paginationRange(Number(params.page || 1), 10);
   const { data: userData } = await supabase.auth.getUser();
 
   if (!userData?.user) return null;
@@ -28,11 +31,12 @@ export default async function LabLensTypesPage() {
     );
   }
 
-  const { data: lenses, error } = await supabase
+  const { data: lenses, error, count } = await supabase
     .from('lens_types')
-    .select('id, name, brand, model, category, material, treatments, status, default_delivery_time_in_stock_days, default_production_time_out_of_stock_days')
+    .select('id, name, brand, model, category, material, treatments, status, default_delivery_time_in_stock_days, default_production_time_out_of_stock_days', { count: 'exact' })
     .eq('lab_id', labId)
-    .order('name');
+    .order('name')
+    .range(pagination.from, pagination.to);
 
   if (error) {
     console.error('Error fetching lens types:', error);
@@ -40,8 +44,8 @@ export default async function LabLensTypesPage() {
 
   const typedLenses = (lenses || []).map((lens) => ({
     ...lens,
-    category: lens.category as LensCategory | null,
-    material: lens.material as LensMaterial | null,
+    category: lens.category as string | null,
+    material: lens.material as string | null,
     status: lens.status as EntityStatus,
     treatments: (lens.treatments || []) as string[],
   }));
@@ -62,6 +66,7 @@ export default async function LabLensTypesPage() {
         contentClassName="p-0"
       >
         <LensTypesTable data={typedLenses} />
+        <PaginationControls page={pagination.page} pageSize={pagination.pageSize} total={count || 0} pathname="/lab/lens-types" />
       </SectionCard>
     </div>
   );

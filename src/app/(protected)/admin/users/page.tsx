@@ -3,13 +3,16 @@ import { UsersTable } from './UsersTable';
 import { EntityStatus, UserRole } from '@/lib/types/enums';
 import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { Plus, Users } from 'lucide-react';
+import { PaginationControls, paginationRange } from '@/components/ui/PaginationControls';
 
 export const metadata = { title: 'Usuarios | LenteLink Admin' };
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const pagination = paginationRange(Number(params.page || 1), 10);
 
-  const { data: users, error } = await supabase
+  const { data: users, error, count } = await supabase
     .from('profiles')
     .select(`
       id,
@@ -20,8 +23,9 @@ export default async function AdminUsersPage() {
       created_at,
       lab:labs(name),
       optical_store:optical_stores(name)
-    `)
-    .order('created_at', { ascending: false });
+    `, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(pagination.from, pagination.to);
 
   if (error) {
     console.error('Error fetching users:', error);
@@ -51,6 +55,7 @@ export default async function AdminUsersPage() {
         contentClassName="p-0"
       >
         <UsersTable data={typedUsers} />
+        <PaginationControls page={pagination.page} pageSize={pagination.pageSize} total={count || 0} pathname="/admin/users" />
       </SectionCard>
     </div>
   );

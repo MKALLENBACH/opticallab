@@ -5,9 +5,6 @@
 import {
   UserRole,
   EntityStatus,
-  LensCategory,
-  LensMaterial,
-  RefractiveIndex,
   LensSide,
   OrderStatus,
   OrderPriority,
@@ -92,9 +89,9 @@ export interface LensType {
   name: string;
   brand: string | null;
   model: string | null;
-  category: LensCategory | null;
-  material: LensMaterial | null;
-  refractive_index: RefractiveIndex | null;
+  category: string | null;
+  material: string | null;
+  refractive_index: string | null;
   treatments: string[];
   allow_order_when_out_of_stock: boolean | null;
   default_delivery_time_in_stock_days: number | null;
@@ -214,7 +211,9 @@ export interface OrderAttachment {
   lab_id: string;
   order_id: string;
   uploaded_by_profile_id: string;
+  attachment_type: string;
   file_url: string;
+  file_path: string | null;
   file_name: string;
   file_type: string | null;
   file_size: number | null;

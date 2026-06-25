@@ -5,6 +5,7 @@ import type { ChangeEvent, Dispatch, ReactNode, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Check, PackageSearch, Search, Sparkles, X } from 'lucide-react';
 import { createSpecialOrderAction, createStoreOrderAction } from '@/actions/orders';
+import { PrescriptionAttachmentUpload, type PendingPrescriptionAttachment } from '@/components/orders/PrescriptionAttachmentUpload';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -27,6 +28,8 @@ interface LensTypeOption {
 interface SpecialOrderFormProps {
   lensTypes: LensTypeOption[];
   variants: Record<string, unknown>[];
+  labId: string;
+  profileId: string;
 }
 
 interface PowerFields {
@@ -143,7 +146,7 @@ function VariantCard({
   );
 }
 
-export function SpecialOrderForm({ lensTypes, variants }: SpecialOrderFormProps) {
+export function SpecialOrderForm({ lensTypes, variants, labId, profileId }: SpecialOrderFormProps) {
   const router = useRouter();
   const allVariants = useMemo(() => variants.map((row) => variantFromRow(row)), [variants]);
   const [brand, setBrand] = useState('');
@@ -164,6 +167,7 @@ export function SpecialOrderForm({ lensTypes, variants }: SpecialOrderFormProps)
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [matches, setMatches] = useState<OrderDraftVariant[]>([]);
+  const [prescription, setPrescription] = useState<PendingPrescriptionAttachment | null>(null);
 
   const brands = useMemo(() => uniqueOptions(lensTypes.map((item) => item.brand)), [lensTypes]);
   const categories = useMemo(() => uniqueOptions(lensTypes.map((item) => item.category)), [lensTypes]);
@@ -201,11 +205,16 @@ export function SpecialOrderForm({ lensTypes, variants }: SpecialOrderFormProps)
   const selectSku = async (variantId: string) => {
     setError(null);
     setMessage(null);
+    if (!prescription) {
+      setError('Anexe a receita para continuar.');
+      return;
+    }
     setIsSubmitting(true);
     const result = await createStoreOrderAction({
       priority: OrderPriority.NORMAL,
       desired_delivery_date: desiredDate || null,
       notes: notes || null,
+      prescription,
       items: [{ lens_variant_id: variantId, quantity, item_notes: notes || null }],
     });
     setIsSubmitting(false);
@@ -229,11 +238,17 @@ export function SpecialOrderForm({ lensTypes, variants }: SpecialOrderFormProps)
     right_power: side === LensSide.PAIR ? toPowerPayload(rightPower) : null,
     left_power: side === LensSide.PAIR ? toPowerPayload(leftPower) : null,
     force_special: forceSpecial,
+    prescription,
   });
 
   const submitSpecial = async (forceSpecial = false) => {
     if (!selectedLensType) {
       setError('Selecione uma lente do catalogo antes de criar o pedido especial.');
+      return;
+    }
+
+    if (!prescription) {
+      setError('Anexe a receita para continuar.');
       return;
     }
 
@@ -446,6 +461,14 @@ export function SpecialOrderForm({ lensTypes, variants }: SpecialOrderFormProps)
           </div>
         </SectionCard>
       )}
+
+      <PrescriptionAttachmentUpload
+        labId={labId}
+        profileId={profileId}
+        value={prescription}
+        onChange={setPrescription}
+        disabled={isSubmitting}
+      />
 
       {matches.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-8 backdrop-blur-sm">

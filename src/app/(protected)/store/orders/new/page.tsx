@@ -41,7 +41,7 @@ export default async function NewStoreOrderPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('lab_id, optical_store_id')
+    .select('id, lab_id, optical_store_id')
     .eq('auth_user_id', userData.user.id)
     .single();
 
@@ -137,6 +137,8 @@ export default async function NewStoreOrderPage({
     return (
       <OrderBuilder
         editOrder={editOrder}
+        labId={labId}
+        profileId={profile?.id}
         blockedMessage={order.status !== OrderStatus.AGUARDANDO_CONFIRMACAO
           ? 'Este pedido ja foi confirmado pelo laboratorio. Somente pedidos aguardando confirmacao podem ser editados pela otica.'
           : null}
@@ -181,6 +183,8 @@ export default async function NewStoreOrderPage({
 
   return (
     <OrderBuilder
+      labId={labId}
+      profileId={profile?.id}
       initialVariant={selectedVariant ? variantFromRow(selectedVariant as Record<string, unknown>) : null}
     />
   );

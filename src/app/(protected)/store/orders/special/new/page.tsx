@@ -11,7 +11,7 @@ export default async function NewSpecialOrderPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('lab_id, optical_store_id')
+    .select('id, lab_id, optical_store_id')
     .eq('auth_user_id', userData.user.id)
     .single();
 
@@ -26,7 +26,7 @@ export default async function NewSpecialOrderPage() {
     labId = store?.lab_id ?? null;
   }
 
-  if (!labId) {
+  if (!profile?.id || !labId) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <p className="text-[var(--color-text-muted)]">Otica sem laboratorio vinculado.</p>
@@ -84,6 +84,8 @@ export default async function NewSpecialOrderPage() {
         treatments: Array.isArray(lensType.treatments) ? lensType.treatments.map(String) : [],
       }))}
       variants={(variants || []) as Record<string, unknown>[]}
+      labId={labId}
+      profileId={profile.id}
     />
   );
 }

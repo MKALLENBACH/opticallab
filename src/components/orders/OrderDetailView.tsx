@@ -12,6 +12,7 @@ import {
   TimelineStep,
 } from '@/components/ui/Premium';
 import { formatDateOnly, formatDateTime } from '@/lib/format/date';
+import { OrderAttachmentsSection, type OrderAttachmentView } from '@/components/orders/OrderAttachmentsSection';
 
 interface OpticalStoreSummary {
   name: string | null;
@@ -55,6 +56,7 @@ export interface OrderDetailData {
     status: string;
     rework_status: string | null;
   }>;
+  attachments?: OrderAttachmentView[];
 }
 
 export interface OrderItemDetail {
@@ -284,6 +286,14 @@ export function OrderDetailView({
           <InfoRow label="Contato" value={order.optical_store?.email || order.optical_store?.phone || 'Nao informado'} />
         </div>
       </SectionCard>
+
+      <OrderAttachmentsSection
+        title={backHref.startsWith('/lab') ? 'Receita do pedido' : 'Receita anexada'}
+        description={backHref.startsWith('/lab')
+          ? 'Receita enviada pela otica para validacao tecnica do laboratorio.'
+          : 'Arquivo enviado para o laboratorio validar corretamente o pedido.'}
+        attachments={order.attachments || []}
+      />
 
       <SectionCard icon={Glasses} title="Itens do pedido" description="Lentes, quantidades, graus e observacoes por item.">
         {!items.length ? (

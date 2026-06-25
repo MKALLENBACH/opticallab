@@ -3,14 +3,18 @@ import { LabsTable } from './LabsTable';
 import { EntityStatus } from '@/lib/types/enums';
 import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { Building2, Plus } from 'lucide-react';
+import { PaginationControls, paginationRange } from '@/components/ui/PaginationControls';
 
-export default async function AdminLabsPage() {
+export default async function AdminLabsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const pagination = paginationRange(Number(params.page || 1), 10);
 
-  const { data: labs, error } = await supabase
+  const { data: labs, error, count } = await supabase
     .from('labs')
-    .select('id, name, slug, email, status, created_at')
-    .order('created_at', { ascending: false });
+    .select('id, name, slug, email, status, created_at', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(pagination.from, pagination.to);
 
   if (error) {
     console.error('Error fetching labs:', error);
@@ -37,6 +41,7 @@ export default async function AdminLabsPage() {
         contentClassName="p-0"
       >
         <LabsTable data={typedLabs} />
+        <PaginationControls page={pagination.page} pageSize={pagination.pageSize} total={count || 0} pathname="/admin/labs" />
       </SectionCard>
     </div>
   );

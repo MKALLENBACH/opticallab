@@ -2,11 +2,14 @@ import { createClient } from '@/lib/supabase/server';
 import { StockTable } from './StockTable';
 import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { Boxes, Plus } from 'lucide-react';
+import { PaginationControls, paginationRange } from '@/components/ui/PaginationControls';
 
 export const metadata = { title: 'Estoque (SKUs) | LenteLink' };
 
-export default async function LabStockPage() {
+export default async function LabStockPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const pagination = paginationRange(Number(params.page || 1), 10);
   const { data: userData } = await supabase.auth.getUser();
 
   if (!userData?.user) return null;
@@ -27,7 +30,7 @@ export default async function LabStockPage() {
     );
   }
 
-  const { data: variants, error } = await supabase
+  const { data: variants, error, count } = await supabase
     .from('lens_variants')
     .select(`
       id,
@@ -42,10 +45,10 @@ export default async function LabStockPage() {
       production_time_out_of_stock_days,
       status,
       lens_type:lens_types(name, brand, material, treatments)
-    `)
+    `, { count: 'exact' })
     .eq('lab_id', labId)
     .order('created_at', { ascending: false })
-    .limit(500);
+    .range(pagination.from, pagination.to);
 
   if (error) {
     console.error('Error fetching stock:', error);
@@ -72,6 +75,7 @@ export default async function LabStockPage() {
         contentClassName="p-0"
       >
         <StockTable data={typedVariants} />
+        <PaginationControls page={pagination.page} pageSize={pagination.pageSize} total={count || 0} pathname="/lab/stock" />
       </SectionCard>
     </div>
   );

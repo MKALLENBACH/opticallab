@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CalendarDays, PackageSearch, Save, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, PackageSearch, Save, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { createStoreOrderAction, updateStoreOrderAction } from '@/actions/orders';
+import { PrescriptionAttachmentUpload, type PendingPrescriptionAttachment } from '@/components/orders/PrescriptionAttachmentUpload';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -27,6 +28,8 @@ import {
   variantFromRow,
 } from './orderDraft';
 
+const ORDER_SEARCH_PAGE_SIZE = 10;
+
 export interface EditableOrderDraft {
   id: string;
   status: string;
@@ -40,6 +43,8 @@ interface OrderBuilderProps {
   initialVariant?: OrderDraftVariant | null;
   editOrder?: EditableOrderDraft | null;
   blockedMessage?: string | null;
+  labId?: string | null;
+  profileId?: string | null;
 }
 
 function emptyDraft(): StoredOrderDraft {
@@ -88,7 +93,7 @@ function availabilityBadge(variant: OrderDraftVariant) {
   return <Badge variant="error" dot>Indisponivel</Badge>;
 }
 
-export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: OrderBuilderProps) {
+export function OrderBuilder({ initialVariant, editOrder, blockedMessage, labId, profileId }: OrderBuilderProps) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [initialDraft] = useState(() => editOrder ?? readDraft(initialVariant));
@@ -100,11 +105,14 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
   const [query, setQuery] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>('all');
   const [results, setResults] = useState<OrderDraftVariant[]>([]);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchTotal, setSearchTotal] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [hasLoadedCatalog, setHasLoadedCatalog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [prescription, setPrescription] = useState<PendingPrescriptionAttachment | null>(null);
   const desiredDateRef = useRef<HTMLInputElement>(null);
   const searchRequestIdRef = useRef(0);
   const lastSearchRef = useRef('');
@@ -118,9 +126,10 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
 
   const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
-  const runSearch = useCallback(async (value: string, force = false) => {
+  const runSearch = useCallback(async (value: string, force = false, pageToLoad = searchPage) => {
     const terms = searchTerms(value);
-    const normalized = `${availabilityFilter}:${terms.join(' ') || 'all'}`;
+    const safePage = Math.max(1, pageToLoad);
+    const normalized = `${availabilityFilter}:${terms.join(' ') || 'all'}:${safePage}`;
 
     if (!force && normalized === lastSearchRef.current) return;
 
@@ -131,6 +140,9 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
     setIsSearching(true);
     setError(null);
     setMessage(null);
+
+    const from = (safePage - 1) * ORDER_SEARCH_PAGE_SIZE;
+    const to = from + ORDER_SEARCH_PAGE_SIZE - 1;
 
     let request = supabase
       .from('lens_variants')
@@ -159,42 +171,47 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
           default_delivery_time_in_stock_days,
           default_production_time_out_of_stock_days
         )
-      `)
+      `, { count: 'exact' })
       .eq('status', 'active')
       .eq('lens_type.status', 'active')
       .order('quantity_available', { ascending: false })
-      .order('sku', { ascending: true });
+      .order('sku', { ascending: true })
+      .range(from, to);
 
     if (availabilityFilter === 'in_stock') {
       request = request.gt('quantity_available', 0);
     }
 
     if (availabilityFilter === 'backorder') {
-      request = request.lte('quantity_available', 0);
+      request = request
+        .lte('quantity_available', 0)
+        .or('allow_order_when_out_of_stock.is.null,allow_order_when_out_of_stock.eq.true', { referencedTable: 'lens_type' });
     }
 
     for (const term of terms) {
       request = request.ilike('searchable_text', `%${term}%`);
     }
 
-    const { data, error: searchError } = await request;
+    const { data, error: searchError, count } = await request;
 
     if (requestId !== searchRequestIdRef.current) return;
 
     if (searchError) {
       setResults([]);
+      setSearchTotal(0);
       setError('Nao foi possivel buscar lentes agora.');
     } else {
       const nextResults = (data || [])
         .map((row) => variantFromRow(row as Record<string, unknown>))
         .filter((variant) => matchesAvailabilityFilter(variant, availabilityFilter));
       setResults(nextResults);
+      setSearchTotal(count || 0);
       if (terms.length && !nextResults.length) setMessage('Nenhuma lente encontrada para esta busca.');
     }
 
     setHasLoadedCatalog(true);
     setIsSearching(false);
-  }, [availabilityFilter, supabase]);
+  }, [availabilityFilter, searchPage, supabase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -202,11 +219,12 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [availabilityFilter, query, runSearch]);
+  }, [availabilityFilter, query, runSearch, searchPage]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await runSearch(query, true);
+    setSearchPage(1);
+    await runSearch(query, true, 1);
   };
 
   const addItem = (variant: OrderDraftVariant) => {
@@ -257,12 +275,18 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
       return;
     }
 
+    if (!isEditing && !prescription) {
+      setError('Anexe a receita para continuar.');
+      return;
+    }
+
     setIsSubmitting(true);
     const currentDesiredDate = desiredDateRef.current?.value || desiredDate;
     const payload = {
       notes: notes || null,
       priority,
       desired_delivery_date: currentDesiredDate || null,
+      prescription: isEditing ? null : prescription,
       items: items.map((item) => ({
         lens_variant_id: item.variant.id,
         quantity: item.quantity,
@@ -329,7 +353,10 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
           <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
             <Input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setSearchPage(1);
+              }}
               placeholder="Ex: LL-VS -2 antirreflexo"
               leftIcon={<Search size={17} />}
               className="flex-1"
@@ -345,7 +372,10 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setAvailabilityFilter(option.value)}
+                  onClick={() => {
+                    setAvailabilityFilter(option.value);
+                    setSearchPage(1);
+                  }}
                   className={`min-h-10 rounded-2xl border px-4 text-[0.84rem] font-extrabold transition-all ${
                     isActive
                       ? 'border-violet-300/40 bg-violet-500/18 text-white shadow-[0_0_24px_rgba(139,92,246,0.16)]'
@@ -361,7 +391,7 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
             <p className="mt-3 text-[0.82rem] font-semibold text-slate-500">
               {isSearching
                 ? 'Carregando catalogo...'
-                : `Mostrando ${results.length} ${results.length === 1 ? 'item' : 'itens'}${query.trim() ? ' encontrados' : ' cadastrados'}.`}
+                : `Mostrando ${results.length} de ${searchTotal} ${searchTotal === 1 ? 'item' : 'itens'}${query.trim() ? ' encontrados' : ' cadastrados'}.`}
             </p>
           )}
 
@@ -411,9 +441,36 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
                 description={query.trim()
                   ? 'Tente outra combinacao de nome, SKU, grau, material ou tratamento.'
                   : 'Nao ha lentes ativas para o filtro selecionado.'}
-              />
+                />
             )}
           </div>
+          {hasLoadedCatalog && searchTotal > ORDER_SEARCH_PAGE_SIZE && (
+            <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-[0.84rem] font-semibold text-slate-400">
+                Pagina <strong className="text-slate-200">{searchPage}</strong> de <strong className="text-slate-200">{Math.ceil(searchTotal / ORDER_SEARCH_PAGE_SIZE)}</strong>
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={searchPage <= 1 || isSearching}
+                  leftIcon={<ChevronLeft size={16} />}
+                  onClick={() => setSearchPage((current) => Math.max(1, current - 1))}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={searchPage >= Math.ceil(searchTotal / ORDER_SEARCH_PAGE_SIZE) || isSearching}
+                  rightIcon={<ChevronRight size={16} />}
+                  onClick={() => setSearchPage((current) => current + 1)}
+                >
+                  Proxima
+                </Button>
+              </div>
+            </div>
+          )}
         </SectionCard>
 
         <SectionCard
@@ -472,6 +529,16 @@ export function OrderBuilder({ initialVariant, editOrder, blockedMessage }: Orde
           )}
         </SectionCard>
       </section>
+
+      {!isEditing && labId && profileId && (
+        <PrescriptionAttachmentUpload
+          labId={labId}
+          profileId={profileId}
+          value={prescription}
+          onChange={setPrescription}
+          disabled={isSubmitting}
+        />
+      )}
 
       <SectionCard
         icon={CalendarDays}

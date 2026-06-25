@@ -3,9 +3,12 @@ import { OpticalStoresTable } from './OpticalStoresTable';
 import { EntityStatus } from '@/lib/types/enums';
 import { HeaderAction, PageHeader, SectionCard } from '@/components/ui/Premium';
 import { Plus, Store } from 'lucide-react';
+import { PaginationControls, paginationRange } from '@/components/ui/PaginationControls';
 
-export default async function LabOpticalStoresPage() {
+export default async function LabOpticalStoresPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const pagination = paginationRange(Number(params.page || 1), 10);
   const { data: userData } = await supabase.auth.getUser();
 
   if (!userData?.user) return null;
@@ -22,11 +25,12 @@ export default async function LabOpticalStoresPage() {
     return <div>Erro: Laboratorio nao encontrado.</div>;
   }
 
-  const { data: stores, error } = await supabase
+  const { data: stores, error, count } = await supabase
     .from('optical_stores')
-    .select('id, name, email, phone, status, created_at')
+    .select('id, name, email, phone, status, created_at', { count: 'exact' })
     .eq('lab_id', labId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(pagination.from, pagination.to);
 
   if (error) {
     console.error('Error fetching optical stores:', error);
@@ -53,6 +57,7 @@ export default async function LabOpticalStoresPage() {
         contentClassName="p-0"
       >
         <OpticalStoresTable data={typedStores} />
+        <PaginationControls page={pagination.page} pageSize={pagination.pageSize} total={count || 0} pathname="/lab/optical-stores" />
       </SectionCard>
     </div>
   );
