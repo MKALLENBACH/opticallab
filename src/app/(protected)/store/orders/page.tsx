@@ -35,6 +35,7 @@ export default async function StoreOrdersPage() {
       status,
       order_type,
       special_status,
+      rework_status,
       priority,
       desired_delivery_date,
       created_at,

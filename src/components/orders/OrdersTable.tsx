@@ -14,6 +14,7 @@ export interface OrderTableRow {
   priority: string;
   order_type?: 'normal' | 'special' | string | null;
   special_status?: string | null;
+  rework_status?: string | null;
   desired_delivery_date: string | null;
   created_at: string;
   item_count?: number;
@@ -47,17 +48,26 @@ function specialStatusLabel(status?: string | null) {
   return status ? map[status] || status : 'Especial';
 }
 
+function reworkStatusLabel(status?: string | null) {
+  const map: Record<string, string> = {
+    aguardando_aceite: 'Aguardando aceite',
+    aceito: 'Aceito',
+    rejeitado: 'Rejeitado',
+  };
+  return status ? map[status] || status : 'Retrabalho';
+}
+
 export function OrdersTable({ data, variant, showSearch = true }: OrdersTableProps) {
-  const [typeFilter, setTypeFilter] = useState<'all' | 'normal' | 'special'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'normal' | 'special' | 'rework'>('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
   const statuses = useMemo(() => (
-    [...new Set(data.map((row) => row.special_status || row.status).filter(Boolean).map(String))]
+    [...new Set(data.map((row) => row.rework_status || row.special_status || row.status).filter(Boolean).map(String))]
   ), [data]);
 
   const filteredData = useMemo(() => data.filter((row) => {
-    const rowType = row.order_type === 'special' ? 'special' : 'normal';
-    const rowStatus = row.special_status || row.status;
+    const rowType = row.order_type === 'special' ? 'special' : row.order_type === 'rework' ? 'rework' : 'normal';
+    const rowStatus = row.rework_status || row.special_status || row.status;
     return (typeFilter === 'all' || rowType === typeFilter)
       && (statusFilter === 'all' || rowStatus === statusFilter);
   }), [data, statusFilter, typeFilter]);
@@ -79,17 +89,23 @@ export function OrdersTable({ data, variant, showSearch = true }: OrdersTablePro
       : []),
     {
       header: 'Tipo',
-      accessor: (row: OrderTableRow) => row.order_type === 'special'
-        ? <Badge variant="info" dot>Pedido Especial</Badge>
-        : <Badge variant="default">Normal</Badge>,
+      accessor: (row: OrderTableRow) => {
+        if (row.order_type === 'special') return <Badge variant="info" dot>Pedido Especial</Badge>;
+        if (row.order_type === 'rework') return <Badge variant="warning" dot>Retrabalho</Badge>;
+        return <Badge variant="default">Normal</Badge>;
+      },
     },
     {
       header: 'Status',
       accessor: (row: OrderTableRow) => (
         <div className="flex flex-wrap items-center gap-2">
-          {row.order_type === 'special'
-            ? <Badge variant={row.special_status === 'rejeitado' ? 'error' : row.special_status === 'aprovado' ? 'success' : 'warning'} dot>{specialStatusLabel(row.special_status)}</Badge>
-            : <StatusBadge status={row.status} />}
+          {row.order_type === 'special' ? (
+            <Badge variant={row.special_status === 'rejeitado' ? 'error' : row.special_status === 'aprovado' ? 'success' : 'warning'} dot>{specialStatusLabel(row.special_status)}</Badge>
+          ) : row.order_type === 'rework' ? (
+            <Badge variant={row.rework_status === 'rejeitado' ? 'error' : row.rework_status === 'aceito' ? 'success' : 'warning'} dot>{reworkStatusLabel(row.rework_status)}</Badge>
+          ) : (
+            <StatusBadge status={row.status} />
+          )}
           <Link
             href={orderLink(variant, row.id)}
             className="inline-flex min-h-8 items-center rounded-xl border border-violet-300/25 bg-violet-500/12 px-3 text-[0.74rem] font-extrabold text-violet-100 transition-colors hover:border-violet-200/40 hover:bg-violet-500/20 hover:text-white"
@@ -118,11 +134,12 @@ export function OrdersTable({ data, variant, showSearch = true }: OrdersTablePro
               ['all', 'Todos'],
               ['normal', 'Normais'],
               ['special', 'Especiais'],
+              ['rework', 'Retrabalhos'],
             ].map(([value, label]) => (
               <button
                 key={value}
                 type="button"
-                onClick={() => setTypeFilter(value as 'all' | 'normal' | 'special')}
+                onClick={() => setTypeFilter(value as 'all' | 'normal' | 'special' | 'rework')}
                 className={`min-h-9 rounded-xl border px-3 text-[0.76rem] font-extrabold transition-colors ${typeFilter === value ? 'border-violet-300/35 bg-violet-500/18 text-white' : 'border-white/10 bg-slate-950/35 text-slate-400 hover:text-white'}`}
               >
                 {label}
@@ -136,7 +153,7 @@ export function OrdersTable({ data, variant, showSearch = true }: OrdersTablePro
           >
             <option value="all">Todos os status</option>
             {statuses.map((status) => (
-              <option key={status} value={status}>{specialStatusLabel(status)}</option>
+              <option key={status} value={status}>{reworkStatusLabel(status) !== status ? reworkStatusLabel(status) : specialStatusLabel(status)}</option>
             ))}
           </select>
         </div>

@@ -35,6 +35,12 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
       status,
       order_type,
       special_status,
+      parent_order_id,
+      rework_reason,
+      rework_status,
+      rework_opened_by_role,
+      rework_rejected_reason,
+      rework_accepted_at,
       priority,
       desired_delivery_date,
       estimated_delivery_date,
@@ -53,7 +59,7 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
 
   if (!order) notFound();
 
-  const [{ data: items }, { data: history }] = await Promise.all([
+  const [{ data: items }, { data: history }, { data: parentOrder }, { data: linkedReworks }] = await Promise.all([
     supabase
       .from('order_items')
       .select(`
@@ -65,6 +71,8 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
         addition_add,
         side,
         item_notes,
+        source_order_item_id,
+        rework_action,
         lens_type:lens_types(name, brand, category, material, refractive_index, treatments),
         lens_variant:lens_variants(sku, quantity_available)
       `)
@@ -77,6 +85,21 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
       .eq('order_id', id)
       .eq('lab_id', labId)
       .order('created_at', { ascending: false }),
+    order.parent_order_id
+      ? supabase
+        .from('orders')
+        .select('id, order_number, status')
+        .eq('id', order.parent_order_id)
+        .eq('lab_id', labId)
+        .single()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from('orders')
+      .select('id, order_number, status, rework_status')
+      .eq('parent_order_id', id)
+      .eq('lab_id', labId)
+      .eq('order_type', 'rework')
+      .order('created_at', { ascending: false }),
   ]);
 
   const profileIds = Array.from(new Set((history || []).map((entry) => entry.changed_by_profile_id).filter(Boolean)));
@@ -88,6 +111,8 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
   const typedOrder = {
     ...order,
     optical_store: normalizeRelation(order.optical_store),
+    parent_order: parentOrder || null,
+    linked_reworks: linkedReworks || [],
   } as OrderDetailData;
 
   const typedItems = (items || []).map((item) => ({
@@ -116,6 +141,8 @@ export default async function LabOrderDetailPage({ params }: { params: Promise<{
           status={typedOrder.status}
           orderType={typedOrder.order_type}
           specialStatus={typedOrder.special_status}
+          reworkStatus={typedOrder.rework_status}
+          reworkOpenedByRole={typedOrder.rework_opened_by_role}
           internalNotes={typedOrder.internal_notes}
         />
       )}

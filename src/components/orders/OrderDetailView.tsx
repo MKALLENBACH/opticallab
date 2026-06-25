@@ -1,4 +1,5 @@
-import { CalendarClock, ClipboardList, FileText, Glasses, History, Sparkles, Store } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarClock, ClipboardList, FileText, Glasses, History, RefreshCw, Sparkles, Store } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import {
@@ -26,6 +27,12 @@ export interface OrderDetailData {
   status: string;
   order_type?: string | null;
   special_status?: string | null;
+  parent_order_id?: string | null;
+  rework_reason?: string | null;
+  rework_status?: string | null;
+  rework_opened_by_role?: string | null;
+  rework_rejected_reason?: string | null;
+  rework_accepted_at?: string | null;
   priority: string;
   desired_delivery_date: string | null;
   estimated_delivery_date?: string | null;
@@ -37,6 +44,17 @@ export interface OrderDetailData {
   created_at: string;
   updated_at: string;
   optical_store: OpticalStoreSummary | null;
+  parent_order?: {
+    id: string;
+    order_number: string;
+    status: string;
+  } | null;
+  linked_reworks?: Array<{
+    id: string;
+    order_number: string;
+    status: string;
+    rework_status: string | null;
+  }>;
 }
 
 export interface OrderItemDetail {
@@ -48,6 +66,8 @@ export interface OrderItemDetail {
   addition_add: number | null;
   side: string | null;
   item_notes: string | null;
+  source_order_item_id?: string | null;
+  rework_action?: string | null;
   lens_type: {
     name: string | null;
     brand: string | null;
@@ -144,6 +164,31 @@ function specialStatusText(status: string | null | undefined) {
   return status ? map[status] || status : '-';
 }
 
+function reworkStatusText(status: string | null | undefined) {
+  const map: Record<string, string> = {
+    aguardando_aceite: 'Aguardando aceite',
+    aceito: 'Aceito',
+    rejeitado: 'Rejeitado',
+  };
+  return status ? map[status] || status : '-';
+}
+
+function reworkReasonText(reason: string | null | undefined) {
+  const map: Record<string, string> = {
+    erro_de_medico: 'Erro de Medico',
+  };
+  return reason ? map[reason] || reason : '-';
+}
+
+function reworkActionText(action: string | null | undefined) {
+  const map: Record<string, string> = {
+    same_lens: 'Refazer com a mesma lente',
+    replace_sku: 'Troca por SKU',
+    special: 'Pedido Especial',
+  };
+  return action ? map[action] || action : '-';
+}
+
 export function OrderDetailView({
   order,
   items,
@@ -157,6 +202,7 @@ export function OrderDetailView({
   const currentStepIndex = ORDER_STEPS.findIndex((step) => step.value === order.status);
   const isCanceled = order.status === 'cancelado';
   const isSpecial = order.order_type === 'special';
+  const isRework = order.order_type === 'rework';
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -168,6 +214,7 @@ export function OrderDetailView({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {isSpecial && <Badge variant="info" dot>Pedido Especial</Badge>}
+            {isRework && <Badge variant="warning" dot>Retrabalho</Badge>}
             <StatusBadge status={order.status} />
             <PriorityBadge priority={order.priority} />
           </div>
@@ -175,6 +222,28 @@ export function OrderDetailView({
       />
 
       {sideActions}
+
+      {!!order.linked_reworks?.length && (
+        <SectionCard icon={RefreshCw} title="Retrabalhos vinculados" description="Este pedido finalizado possui retrabalho criado sem alterar seu historico original.">
+          <div className="flex flex-col gap-2">
+            {order.linked_reworks.map((rework) => (
+              <Link
+                key={rework.id}
+                href={backHref.startsWith('/lab') ? `/lab/orders/${rework.id}` : `/store/orders/${rework.id}`}
+                className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3 transition-colors hover:border-violet-300/30 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span className="font-mono font-extrabold text-white">Retrabalho: {rework.order_number}</span>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={rework.rework_status === 'rejeitado' ? 'error' : rework.rework_status === 'aceito' ? 'success' : 'warning'} dot>
+                    {reworkStatusText(rework.rework_status)}
+                  </Badge>
+                  <StatusBadge status={rework.status} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </SectionCard>
+      )}
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <SectionCard icon={ClipboardList} title="Resumo do pedido" description="Principais dados operacionais do pedido.">
@@ -247,6 +316,13 @@ export function OrderDetailView({
                   <span>Lado: {formatSide(item.side)}</span>
                   <span>Estoque: {item.lens_variant?.quantity_available ?? '-'} un</span>
                 </div>
+                {item.rework_action && (
+                  <div className="mt-3">
+                    <Badge variant={item.rework_action === 'special' ? 'info' : 'warning'} size="sm">
+                      {reworkActionText(item.rework_action)}
+                    </Badge>
+                  </div>
+                )}
                 {item.item_notes && (
                   <p className="mt-3 rounded-2xl border border-white/10 bg-white/[0.025] px-3 py-2 text-[0.85rem] font-medium text-slate-300">
                     {item.item_notes}
@@ -289,6 +365,33 @@ export function OrderDetailView({
               </article>
             ))}
           </div>
+        </SectionCard>
+      )}
+
+      {isRework && (
+        <SectionCard icon={RefreshCw} title="Dados do Retrabalho" description="Novo pedido vinculado ao pedido original finalizado.">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <InfoRow
+              label="Pedido original"
+              value={order.parent_order ? (
+                <Link
+                  href={backHref.startsWith('/lab') ? `/lab/orders/${order.parent_order.id}` : `/store/orders/${order.parent_order.id}`}
+                  className="font-mono font-extrabold text-violet-200 hover:text-white"
+                >
+                  {order.parent_order.order_number}
+                </Link>
+              ) : '-'}
+            />
+            <InfoRow label="Motivo" value={reworkReasonText(order.rework_reason)} />
+            <InfoRow label="Status do aceite" value={reworkStatusText(order.rework_status)} />
+            <InfoRow label="Aberto por" value={order.rework_opened_by_role === 'lab' ? 'Laboratorio' : 'Otica'} />
+            <InfoRow label="Aceito em" value={formatDateTime(order.rework_accepted_at || null)} />
+          </div>
+          {order.rework_rejected_reason && (
+            <div className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-[0.9rem] font-semibold text-red-100">
+              Motivo da rejeicao: {order.rework_rejected_reason}
+            </div>
+          )}
         </SectionCard>
       )}
 

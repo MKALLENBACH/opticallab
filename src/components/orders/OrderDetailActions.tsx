@@ -2,8 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, Edit3, FileText, Send, XCircle } from 'lucide-react';
-import { approveSpecialOrderAction, rejectSpecialOrderAction, updateLabOrderNotesAction, updateLabOrderStatusAction } from '@/actions/orders';
+import { AlertTriangle, CheckCircle2, Edit3, FileText, RefreshCw, Send, XCircle } from 'lucide-react';
+import {
+  acceptReworkOrderAction,
+  approveSpecialOrderAction,
+  rejectReworkOrderAction,
+  rejectSpecialOrderAction,
+  updateLabOrderNotesAction,
+  updateLabOrderStatusAction,
+} from '@/actions/orders';
 import { getAvailableTransitions } from '@/lib/constants/order-flow';
 import { OrderStatus } from '@/lib/types/enums';
 import { Button } from '@/components/ui/Button';
@@ -34,7 +41,8 @@ export function StoreOrderDetailActions({
   orderType?: string | null;
 }) {
   const router = useRouter();
-  const canEdit = status === OrderStatus.AGUARDANDO_CONFIRMACAO && orderType !== 'special';
+  const canEdit = status === OrderStatus.AGUARDANDO_CONFIRMACAO && orderType !== 'special' && orderType !== 'rework';
+  const canOpenRework = status === OrderStatus.FINALIZADO && orderType !== 'rework';
 
   return (
     <SectionCard
@@ -42,22 +50,38 @@ export function StoreOrderDetailActions({
       title="Acoes do pedido"
       description={canEdit
         ? 'Este pedido ainda pode ser ajustado antes da confirmacao do laboratorio.'
-        : orderType === 'special'
-          ? 'Pedidos especiais sao analisados pelo laboratorio e nao usam a edicao normal por SKU.'
+        : orderType === 'special' || orderType === 'rework'
+          ? 'Este pedido usa um fluxo operacional especifico e nao usa a edicao normal por SKU.'
         : 'Depois da confirmacao, alteracoes precisam ser combinadas com o laboratorio.'}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[0.9rem] font-medium text-slate-400">
-          {canEdit ? 'Edite itens, quantidades, prioridade e observacoes.' : 'Edicao bloqueada para manter o historico operacional consistente.'}
+          {canEdit
+            ? 'Edite itens, quantidades, prioridade e observacoes.'
+            : canOpenRework
+              ? 'Pedido finalizado pode gerar um novo pedido de retrabalho vinculado.'
+              : 'Edicao bloqueada para manter o historico operacional consistente.'}
         </p>
-        <Button
-          type="button"
-          disabled={!canEdit}
-          leftIcon={<Edit3 size={16} />}
-          onClick={() => router.push(`/store/orders/new?editId=${orderId}`)}
-        >
-          Editar pedido
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {canOpenRework && (
+            <Button
+              type="button"
+              variant="secondary"
+              leftIcon={<RefreshCw size={16} />}
+              onClick={() => router.push(`/store/orders/${orderId}/rework`)}
+            >
+              Abrir Retrabalho
+            </Button>
+          )}
+          <Button
+            type="button"
+            disabled={!canEdit}
+            leftIcon={<Edit3 size={16} />}
+            onClick={() => router.push(`/store/orders/new?editId=${orderId}`)}
+          >
+            Editar pedido
+          </Button>
+        </div>
       </div>
     </SectionCard>
   );
@@ -68,12 +92,16 @@ export function LabOrderDetailActions({
   status,
   orderType = 'normal',
   specialStatus,
+  reworkStatus,
+  reworkOpenedByRole,
   internalNotes,
 }: {
   orderId: string;
   status: string;
   orderType?: string | null;
   specialStatus?: string | null;
+  reworkStatus?: string | null;
+  reworkOpenedByRole?: string | null;
   internalNotes: string | null;
 }) {
   const router = useRouter();
@@ -86,9 +114,12 @@ export function LabOrderDetailActions({
   const [estimatedNotes, setEstimatedNotes] = useState('');
   const [createSku, setCreateSku] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [reworkRejectReason, setReworkRejectReason] = useState('');
   const currentStatus = status as OrderStatus;
   const isSpecialPending = orderType === 'special' && specialStatus === 'aguardando_analise';
-  const transitions = isSpecialPending ? [] : getAvailableTransitions(currentStatus, true);
+  const isReworkPending = orderType === 'rework' && reworkStatus === 'aguardando_aceite';
+  const canOpenRework = status === OrderStatus.FINALIZADO && orderType !== 'rework';
+  const transitions = isSpecialPending || isReworkPending ? [] : getAvailableTransitions(currentStatus, true);
 
   const saveNotes = async () => {
     setPendingAction('notes');
@@ -176,6 +207,40 @@ export function LabOrderDetailActions({
     router.refresh();
   };
 
+  const acceptRework = async () => {
+    setPendingAction('accept-rework');
+    setError(null);
+    setMessage(null);
+
+    const result = await acceptReworkOrderAction(orderId);
+    setPendingAction(null);
+
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+
+    setMessage('Retrabalho aceito com sucesso.');
+    router.refresh();
+  };
+
+  const rejectRework = async () => {
+    setPendingAction('reject-rework');
+    setError(null);
+    setMessage(null);
+
+    const result = await rejectReworkOrderAction({ orderId, reason: reworkRejectReason });
+    setPendingAction(null);
+
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+
+    setMessage('Retrabalho rejeitado.');
+    router.refresh();
+  };
+
   return (
     <SectionCard
       icon={FileText}
@@ -207,7 +272,45 @@ export function LabOrderDetailActions({
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
           <p className="text-[0.78rem] font-extrabold uppercase tracking-[0.14em] text-slate-500">Proximas acoes</p>
-          {isSpecialPending ? (
+          {isReworkPending ? (
+            <div className="mt-4 flex flex-col gap-3">
+              <p className="rounded-2xl border border-amber-300/20 bg-amber-500/10 px-3 py-3 text-[0.84rem] font-semibold text-amber-100">
+                Retrabalho aberto pela {reworkOpenedByRole === 'optical' ? 'otica' : 'equipe do laboratorio'} aguardando aceite.
+              </p>
+              <Button
+                type="button"
+                variant="success"
+                isLoading={pendingAction === 'accept-rework'}
+                disabled={Boolean(pendingAction)}
+                onClick={acceptRework}
+                leftIcon={<CheckCircle2 size={16} />}
+                className="w-full"
+              >
+                Aceitar Retrabalho
+              </Button>
+              <label className="flex flex-col gap-2 text-[0.82rem] font-bold text-slate-200">
+                Motivo da rejeicao
+                <textarea
+                  value={reworkRejectReason}
+                  onChange={(event) => setReworkRejectReason(event.target.value)}
+                  rows={3}
+                  className="resize-y rounded-2xl border border-white/10 bg-slate-950/62 px-3 py-2 text-white outline-none"
+                  placeholder="Ex: Solicitacao nao aprovada pelo laboratorio."
+                />
+              </label>
+              <Button
+                type="button"
+                variant="danger"
+                isLoading={pendingAction === 'reject-rework'}
+                disabled={Boolean(pendingAction)}
+                onClick={rejectRework}
+                leftIcon={<XCircle size={16} />}
+                className="w-full"
+              >
+                Rejeitar Retrabalho
+              </Button>
+            </div>
+          ) : isSpecialPending ? (
             <div className="mt-4 flex flex-col gap-3">
               <label className="flex flex-col gap-2 text-[0.82rem] font-bold text-slate-200">
                 Prazo estimado
@@ -263,6 +366,18 @@ export function LabOrderDetailActions({
                 className="w-full"
               >
                 Rejeitar pedido especial
+              </Button>
+            </div>
+          ) : canOpenRework ? (
+            <div className="mt-4 flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => router.push(`/lab/orders/${orderId}/rework`)}
+                leftIcon={<RefreshCw size={16} />}
+                className="w-full"
+              >
+                Abrir Retrabalho
               </Button>
             </div>
           ) : transitions.length ? (

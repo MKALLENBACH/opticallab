@@ -65,6 +65,49 @@ const specialRejectPayloadSchema = z.object({
   reason: z.string().trim().min(1, 'Informe o motivo da rejeicao.').max(2000),
 });
 
+const reworkItemActionSchema = z.enum(['same_lens', 'replace_sku', 'special']);
+
+const reworkItemPayloadSchema = z.object({
+  source_order_item_id: z.string().uuid('Item original invalido.'),
+  action: reworkItemActionSchema,
+  lens_variant_id: z.string().uuid('SKU invalido.').nullable().optional(),
+  lens_type_id: z.string().uuid('Lente invalida.').nullable().optional(),
+  treatments: z.array(z.string()).default([]),
+  side: z.nativeEnum(LensSide, { error: 'Selecione o lado da lente.' }).nullable().optional(),
+  quantity: z.number().int().min(1, 'Quantidade deve ser maior que zero.'),
+  single_power: lensPowerSchema.nullable().optional(),
+  force_special: z.boolean().default(false),
+  item_notes: z.string().trim().max(1000).nullable().optional(),
+}).superRefine((value, ctx) => {
+  if (value.action === 'replace_sku' && !value.lens_variant_id) {
+    ctx.addIssue({ code: 'custom', path: ['lens_variant_id'], message: 'Selecione o SKU substituto.' });
+  }
+
+  if (value.action === 'special') {
+    if (!value.lens_type_id) {
+      ctx.addIssue({ code: 'custom', path: ['lens_type_id'], message: 'Selecione a lente-base para o Pedido Especial.' });
+    }
+    if (!value.side) {
+      ctx.addIssue({ code: 'custom', path: ['side'], message: 'Selecione o lado da lente.' });
+    }
+    if (!value.single_power) {
+      ctx.addIssue({ code: 'custom', path: ['single_power'], message: 'Informe o grau do Pedido Especial.' });
+    }
+  }
+});
+
+const createReworkPayloadSchema = z.object({
+  parent_order_id: z.string().uuid('Pedido original invalido.'),
+  reason: z.literal('erro_de_medico', { error: 'Selecione o motivo Erro de Medico.' }),
+  notes: z.string().trim().max(2000).nullable().optional(),
+  items: z.array(reworkItemPayloadSchema).min(1, 'Selecione pelo menos um item para retrabalho.'),
+});
+
+const reworkRejectPayloadSchema = z.object({
+  orderId: z.string().uuid(),
+  reason: z.string().trim().min(1, 'Informe o motivo da rejeicao.').max(2000),
+});
+
 const updateStatusSchema = z.object({
   orderId: z.string().uuid(),
   nextStatus: z.nativeEnum(OrderStatus),
@@ -73,6 +116,7 @@ const updateStatusSchema = z.object({
 
 type StoreOrderPayload = z.infer<typeof storeOrderPayloadSchema>;
 type SpecialOrderPayload = z.infer<typeof specialOrderPayloadSchema>;
+type CreateReworkPayload = z.infer<typeof createReworkPayloadSchema>;
 type ValidatedOrderItem = StoreOrderPayload['items'][number] & {
   lens_type_id: string;
   sphere_esf: number | null;
@@ -89,6 +133,41 @@ type ValidatedOrderItem = StoreOrderPayload['items'][number] & {
 type SpecialOrderItemInput = {
   side: LensSide;
   power: z.infer<typeof lensPowerSchema>;
+};
+
+type ReworkSourceItem = {
+  id: string;
+  lens_type_id: string;
+  lens_variant_id: string | null;
+  quantity: number;
+  sphere_esf: number | null;
+  cylinder_cil: number | null;
+  axis: number | null;
+  addition_add: number | null;
+  prism: string | null;
+  prism_base: string | null;
+  base_curve: number | null;
+  diameter: number | null;
+  side: string | null;
+  item_notes: string | null;
+};
+
+type ReworkBuiltItem = {
+  source_order_item_id: string;
+  rework_action: z.infer<typeof reworkItemActionSchema>;
+  lens_type_id: string;
+  lens_variant_id: string | null;
+  quantity: number;
+  sphere_esf: number | null;
+  cylinder_cil: number | null;
+  axis: number | null;
+  addition_add: number | null;
+  prism: string | null;
+  prism_base: string | null;
+  base_curve: number | null;
+  diameter: number | null;
+  side: string | null;
+  item_notes: string | null;
 };
 
 type ProfileContext = {
@@ -380,6 +459,143 @@ function revalidateOrderRoutes(orderId?: string) {
   }
 }
 
+function profileActor(profile: ProfileContext): 'lab' | 'optical' | null {
+  if ([UserRole.LAB_ADMIN, UserRole.LAB_USER].includes(profile.role)) return 'lab';
+  if ([UserRole.OPTICAL_ADMIN, UserRole.OPTICAL_USER].includes(profile.role)) return 'optical';
+  return null;
+}
+
+async function validateStockForItems(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  labId: string,
+  items: Array<{ lens_variant_id: string | null; quantity: number }>
+) {
+  const skuItems = items.filter((item) => item.lens_variant_id);
+  const variantIds = [...new Set(skuItems.map((item) => item.lens_variant_id as string))];
+  if (!variantIds.length) return { variants: new Map<string, { id: string; quantity_available: number; sku: string }>() };
+
+  const { data: variants, error } = await supabase
+    .from('lens_variants')
+    .select('id, quantity_available, sku')
+    .eq('lab_id', labId)
+    .in('id', variantIds);
+
+  if (error) return { error: 'Nao foi possivel validar o estoque dos itens.' };
+
+  const variantMap = new Map((variants || []).map((variant) => [variant.id, variant]));
+  const requestedByVariant = new Map<string, number>();
+
+  for (const item of skuItems) {
+    const variantId = item.lens_variant_id as string;
+    requestedByVariant.set(variantId, (requestedByVariant.get(variantId) || 0) + Number(item.quantity ?? 0));
+  }
+
+  for (const [variantId, quantity] of requestedByVariant.entries()) {
+    const variant = variantMap.get(variantId);
+    if (!variant) return { error: 'Um dos SKUs selecionados nao pertence ao laboratorio.' };
+    if (Number(variant.quantity_available ?? 0) < quantity) {
+      return { error: `Estoque insuficiente para confirmar este pedido. Ajuste o estoque ou edite o pedido. SKU: ${variant.sku}.` };
+    }
+  }
+
+  return { variants: variantMap };
+}
+
+async function deductStockForOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  labId: string,
+  profileId: string,
+  orderId: string,
+  reason = 'Confirmacao de pedido'
+) {
+  const { data: items, error: itemsError } = await supabase
+    .from('order_items')
+    .select('id, lens_variant_id, quantity')
+    .eq('order_id', orderId)
+    .eq('lab_id', labId);
+
+  if (itemsError) return { error: 'Nao foi possivel validar o estoque dos itens.' };
+
+  const stockResult = await validateStockForItems(supabase, labId, (items || []).map((item) => ({
+    lens_variant_id: item.lens_variant_id,
+    quantity: Number(item.quantity ?? 0),
+  })));
+
+  if (stockResult.error) return { error: stockResult.error };
+  if (!stockResult.variants) return { error: 'Nao foi possivel validar o estoque dos itens.' };
+
+  for (const item of items || []) {
+    if (!item.lens_variant_id) continue;
+
+    const variant = stockResult.variants.get(item.lens_variant_id);
+    if (!variant) continue;
+
+    const newQuantity = Number(variant.quantity_available ?? 0) - Number(item.quantity ?? 0);
+    const { error: stockError } = await supabase
+      .from('lens_variants')
+      .update({ quantity_available: newQuantity })
+      .eq('id', variant.id)
+      .eq('lab_id', labId);
+
+    if (stockError) return { error: `Nao foi possivel baixar o estoque do SKU ${variant.sku}.` };
+
+    await supabase.from('inventory_movements').insert({
+      lab_id: labId,
+      lens_variant_id: variant.id,
+      movement_type: 'saida',
+      quantity: Number(item.quantity ?? 0),
+      reason,
+      order_id: orderId,
+      created_by_profile_id: profileId,
+    });
+  }
+
+  return { success: true };
+}
+
+async function restoreStockForCanceledOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  labId: string,
+  profileId: string,
+  orderId: string
+) {
+  const { data: movements } = await supabase
+    .from('inventory_movements')
+    .select('lens_variant_id, quantity')
+    .eq('order_id', orderId)
+    .eq('lab_id', labId)
+    .eq('movement_type', 'saida');
+
+  for (const movement of movements || []) {
+    const { data: variant } = await supabase
+      .from('lens_variants')
+      .select('id, quantity_available')
+      .eq('id', movement.lens_variant_id)
+      .eq('lab_id', labId)
+      .single();
+
+    if (!variant) continue;
+
+    await supabase
+      .from('lens_variants')
+      .update({ quantity_available: Number(variant.quantity_available ?? 0) + Number(movement.quantity ?? 0) })
+      .eq('id', variant.id)
+      .eq('lab_id', labId);
+
+    await supabase.from('inventory_movements').insert({
+      lab_id: labId,
+      lens_variant_id: variant.id,
+      movement_type: 'cancelamento',
+      quantity: Number(movement.quantity ?? 0),
+      reason: 'Cancelamento de pedido',
+      order_id: orderId,
+      created_by_profile_id: profileId,
+    });
+  }
+
+  return { success: true };
+}
+
 export async function createStoreOrderAction(payload: StoreOrderPayload) {
   const parsed = storeOrderPayloadSchema.safeParse(payload);
   if (!parsed.success) {
@@ -556,6 +772,420 @@ export async function createSpecialOrderAction(payload: SpecialOrderPayload) {
 
   revalidateOrderRoutes(order.id);
   return { success: true, orderId: order.id };
+}
+
+export async function createReworkOrderAction(payload: CreateReworkPayload) {
+  const parsed = createReworkPayloadSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || 'Revise os dados do retrabalho.' };
+  }
+
+  const context = await getProfileContext();
+  if ('error' in context) return { error: context.error };
+
+  const { supabase, profile } = context;
+  const actor = profileActor(profile);
+
+  if (!actor) return { error: 'Usuario sem permissao para abrir retrabalho.' };
+  if (actor === 'optical' && !profile.optical_store_id) return { error: 'Otica vinculada nao encontrada.' };
+  if (actor === 'optical' && !parsed.data.notes?.trim()) {
+    return { error: 'Explique o que precisa ser refeito ou ajustado.' };
+  }
+
+  let parentQuery = supabase
+    .from('orders')
+    .select('id, lab_id, optical_store_id, order_number, status, priority, order_type')
+    .eq('id', parsed.data.parent_order_id)
+    .eq('lab_id', profile.lab_id);
+
+  if (actor === 'optical') {
+    parentQuery = parentQuery.eq('optical_store_id', profile.optical_store_id as string);
+  }
+
+  const { data: parentOrder, error: parentError } = await parentQuery.single();
+
+  if (parentError || !parentOrder) return { error: 'Pedido original nao encontrado.' };
+  if (parentOrder.status !== OrderStatus.FINALIZADO) {
+    return { error: 'Retrabalho so pode ser aberto para pedidos finalizados.' };
+  }
+  if (parentOrder.order_type === 'rework') {
+    return { error: 'Abra o retrabalho a partir do pedido original finalizado.' };
+  }
+
+  const recentIso = new Date(Date.now() - 15_000).toISOString();
+  let duplicateQuery = supabase
+    .from('orders')
+    .select('id')
+    .eq('parent_order_id', parentOrder.id)
+    .eq('order_type', 'rework')
+    .eq('rework_opened_by_profile_id', profile.id)
+    .eq('rework_reason', parsed.data.reason)
+    .gte('created_at', recentIso)
+    .limit(1);
+
+  if (parsed.data.notes?.trim()) {
+    duplicateQuery = duplicateQuery.eq('notes', parsed.data.notes.trim());
+  } else {
+    duplicateQuery = duplicateQuery.is('notes', null);
+  }
+
+  const { data: duplicate } = await duplicateQuery.maybeSingle();
+  if (duplicate?.id) return { success: true, orderId: duplicate.id, duplicate: true };
+
+  const sourceItemIds = parsed.data.items.map((item) => item.source_order_item_id);
+  if (new Set(sourceItemIds).size !== sourceItemIds.length) {
+    return { error: 'Ha itens duplicados no retrabalho.' };
+  }
+
+  const { data: sourceItems, error: sourceItemsError } = await supabase
+    .from('order_items')
+    .select(`
+      id,
+      lens_type_id,
+      lens_variant_id,
+      quantity,
+      sphere_esf,
+      cylinder_cil,
+      axis,
+      addition_add,
+      prism,
+      prism_base,
+      base_curve,
+      diameter,
+      side,
+      item_notes
+    `)
+    .eq('order_id', parentOrder.id)
+    .eq('lab_id', profile.lab_id)
+    .in('id', sourceItemIds);
+
+  if (sourceItemsError) return { error: 'Nao foi possivel validar os itens do pedido original.' };
+  if ((sourceItems || []).length !== sourceItemIds.length) {
+    return { error: 'Um dos itens selecionados nao pertence ao pedido original.' };
+  }
+
+  const sourceMap = new Map((sourceItems || []).map((item) => [item.id, item as ReworkSourceItem]));
+  const replacementIds = parsed.data.items
+    .filter((item) => item.action === 'replace_sku' && item.lens_variant_id)
+    .map((item) => item.lens_variant_id as string);
+
+  const { data: replacements, error: replacementError } = replacementIds.length
+    ? await supabase
+      .from('lens_variants')
+      .select(`
+        id,
+        lab_id,
+        lens_type_id,
+        sphere_esf,
+        cylinder_cil,
+        axis,
+        addition_add,
+        prism,
+        prism_base,
+        base_curve,
+        diameter,
+        side,
+        status
+      `)
+      .eq('lab_id', profile.lab_id)
+      .in('id', replacementIds)
+    : { data: [], error: null };
+
+  if (replacementError) return { error: 'Nao foi possivel validar o SKU substituto.' };
+
+  const replacementMap = new Map((replacements || []).map((variant) => [variant.id, variant]));
+  const builtItems: ReworkBuiltItem[] = [];
+
+  for (const item of parsed.data.items) {
+    const sourceItem = sourceMap.get(item.source_order_item_id);
+    if (!sourceItem) return { error: 'Item original invalido.' };
+    if (item.quantity > Number(sourceItem.quantity ?? 0)) {
+      return { error: 'A quantidade do retrabalho nao pode ser maior que a quantidade do item original.' };
+    }
+
+    if (item.action === 'same_lens') {
+      builtItems.push({
+        source_order_item_id: sourceItem.id,
+        rework_action: item.action,
+        lens_type_id: sourceItem.lens_type_id,
+        lens_variant_id: sourceItem.lens_variant_id,
+        quantity: item.quantity,
+        sphere_esf: sourceItem.sphere_esf,
+        cylinder_cil: sourceItem.cylinder_cil,
+        axis: sourceItem.axis,
+        addition_add: sourceItem.addition_add,
+        prism: sourceItem.prism,
+        prism_base: sourceItem.prism_base,
+        base_curve: sourceItem.base_curve,
+        diameter: sourceItem.diameter,
+        side: sourceItem.side,
+        item_notes: item.item_notes || parsed.data.notes || sourceItem.item_notes,
+      });
+      continue;
+    }
+
+    if (item.action === 'replace_sku') {
+      const replacement = replacementMap.get(item.lens_variant_id as string);
+      if (!replacement || replacement.status !== EntityStatus.ACTIVE) {
+        return { error: 'O SKU substituto precisa estar ativo e pertencer ao laboratorio.' };
+      }
+
+      builtItems.push({
+        source_order_item_id: sourceItem.id,
+        rework_action: item.action,
+        lens_type_id: replacement.lens_type_id,
+        lens_variant_id: replacement.id,
+        quantity: item.quantity,
+        sphere_esf: replacement.sphere_esf === null ? null : Number(replacement.sphere_esf),
+        cylinder_cil: replacement.cylinder_cil === null ? null : Number(replacement.cylinder_cil),
+        axis: replacement.axis === null ? null : Number(replacement.axis),
+        addition_add: replacement.addition_add === null ? null : Number(replacement.addition_add),
+        prism: replacement.prism,
+        prism_base: replacement.prism_base,
+        base_curve: replacement.base_curve === null ? null : Number(replacement.base_curve),
+        diameter: replacement.diameter === null ? null : Number(replacement.diameter),
+        side: replacement.side,
+        item_notes: item.item_notes || parsed.data.notes || null,
+      });
+      continue;
+    }
+
+    const specialPayload: SpecialOrderPayload = {
+      lens_type_id: item.lens_type_id as string,
+      treatments: item.treatments,
+      side: item.side as LensSide,
+      quantity: item.quantity,
+      desired_delivery_date: null,
+      optical_notes: item.item_notes || parsed.data.notes || null,
+      single_power: item.single_power,
+      right_power: null,
+      left_power: null,
+      force_special: item.force_special,
+    };
+
+    const lensTypeResult = await validateSpecialLensType(supabase, profile.lab_id, specialPayload);
+    if ('error' in lensTypeResult) return { error: lensTypeResult.error };
+
+    const compatibleVariants = await findCompatibleSpecialVariants(
+      supabase,
+      profile.lab_id,
+      specialPayload.lens_type_id,
+      specialItemsFromPayload(specialPayload)
+    );
+
+    if (compatibleVariants.length && !item.force_special) {
+      return {
+        requiresConfirmation: true,
+        source_order_item_id: item.source_order_item_id,
+        matches: compatibleVariants,
+      };
+    }
+
+    builtItems.push({
+      source_order_item_id: sourceItem.id,
+      rework_action: item.action,
+      lens_type_id: specialPayload.lens_type_id,
+      lens_variant_id: null,
+      quantity: item.quantity,
+      sphere_esf: item.single_power?.sphere_esf ?? null,
+      cylinder_cil: item.single_power?.cylinder_cil ?? null,
+      axis: item.single_power?.axis ?? null,
+      addition_add: item.single_power?.addition_add ?? null,
+      prism: null,
+      prism_base: null,
+      base_curve: null,
+      diameter: null,
+      side: specialPayload.side,
+      item_notes: item.item_notes || parsed.data.notes || null,
+    });
+  }
+
+  if (actor === 'lab') {
+    const stockResult = await validateStockForItems(supabase, profile.lab_id, builtItems);
+    if (stockResult.error) return { error: stockResult.error };
+  }
+
+  const { data: orderNumber, error: numberError } = await supabase.rpc('get_next_order_number', {
+    p_lab_id: profile.lab_id,
+  });
+
+  if (numberError || !orderNumber) return { error: 'Nao foi possivel gerar o numero do retrabalho.' };
+
+  const startsAccepted = actor === 'lab';
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .insert({
+      lab_id: profile.lab_id,
+      optical_store_id: parentOrder.optical_store_id,
+      order_number: orderNumber,
+      status: startsAccepted ? OrderStatus.CONFIRMADO : OrderStatus.AGUARDANDO_CONFIRMACAO,
+      order_type: 'rework',
+      parent_order_id: parentOrder.id,
+      rework_reason: parsed.data.reason,
+      rework_status: startsAccepted ? 'aceito' : 'aguardando_aceite',
+      rework_opened_by_profile_id: profile.id,
+      rework_opened_by_role: actor,
+      rework_accepted_at: startsAccepted ? new Date().toISOString() : null,
+      rework_accepted_by_profile_id: startsAccepted ? profile.id : null,
+      priority: parentOrder.priority || OrderPriority.NORMAL,
+      requested_by_profile_id: profile.id,
+      confirmed_by_profile_id: startsAccepted ? profile.id : null,
+      confirmed_at: startsAccepted ? new Date().toISOString() : null,
+      notes: parsed.data.notes?.trim() || null,
+    })
+    .select('id')
+    .single();
+
+  if (orderError || !order) return { error: 'Nao foi possivel criar o retrabalho.' };
+
+  const { error: itemsError } = await supabase.from('order_items').insert(
+    builtItems.map((item) => ({
+      order_id: order.id,
+      lab_id: profile.lab_id,
+      lens_type_id: item.lens_type_id,
+      lens_variant_id: item.lens_variant_id,
+      quantity: item.quantity,
+      sphere_esf: item.sphere_esf,
+      cylinder_cil: item.cylinder_cil,
+      axis: item.axis,
+      addition_add: item.addition_add,
+      prism: item.prism,
+      prism_base: item.prism_base,
+      base_curve: item.base_curve,
+      diameter: item.diameter,
+      side: item.side,
+      item_notes: item.item_notes,
+      source_order_item_id: item.source_order_item_id,
+      rework_action: item.rework_action,
+    }))
+  );
+
+  if (itemsError) return { error: 'Retrabalho criado, mas houve erro ao vincular os itens. Contate o laboratorio.' };
+
+  if (startsAccepted) {
+    const stockResult = await deductStockForOrder(supabase, profile.lab_id, profile.id, order.id, 'Retrabalho aberto pelo laboratorio');
+    if (stockResult.error) return { error: stockResult.error };
+  }
+
+  await supabase.from('order_status_history').insert({
+    order_id: order.id,
+    lab_id: profile.lab_id,
+    old_status: null,
+    new_status: startsAccepted ? OrderStatus.CONFIRMADO : OrderStatus.AGUARDANDO_CONFIRMACAO,
+    changed_by_profile_id: profile.id,
+    notes: startsAccepted
+      ? `Retrabalho criado e aceito pelo laboratorio a partir do pedido ${parentOrder.order_number}.`
+      : `Solicitacao de retrabalho criada pela otica a partir do pedido ${parentOrder.order_number}.`,
+  });
+
+  revalidateOrderRoutes(order.id);
+  revalidateOrderRoutes(parentOrder.id);
+  revalidatePath('/lab/stock');
+  return { success: true, orderId: order.id };
+}
+
+export async function acceptReworkOrderAction(orderId: string) {
+  const context = await getProfileContext();
+  if ('error' in context) return { error: context.error };
+
+  const { supabase, profile } = context;
+  if (![UserRole.LAB_ADMIN, UserRole.LAB_USER].includes(profile.role)) {
+    return { error: 'Apenas usuarios do laboratorio podem aceitar retrabalhos.' };
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id, status, parent_order_id, rework_status')
+    .eq('id', orderId)
+    .eq('lab_id', profile.lab_id)
+    .eq('order_type', 'rework')
+    .single();
+
+  if (orderError || !order) return { error: 'Retrabalho nao encontrado.' };
+  if (order.rework_status !== 'aguardando_aceite') return { error: 'Este retrabalho nao esta aguardando aceite.' };
+
+  const stockResult = await deductStockForOrder(supabase, profile.lab_id, profile.id, order.id, 'Aceite de retrabalho');
+  if (stockResult.error) return { error: stockResult.error };
+
+  const acceptedAt = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from('orders')
+    .update({
+      status: OrderStatus.CONFIRMADO,
+      rework_status: 'aceito',
+      rework_accepted_at: acceptedAt,
+      rework_accepted_by_profile_id: profile.id,
+      confirmed_by_profile_id: profile.id,
+      confirmed_at: acceptedAt,
+    })
+    .eq('id', order.id)
+    .eq('lab_id', profile.lab_id);
+
+  if (updateError) return { error: 'Nao foi possivel aceitar o retrabalho.' };
+
+  await supabase.from('order_status_history').insert({
+    order_id: order.id,
+    lab_id: profile.lab_id,
+    old_status: order.status,
+    new_status: OrderStatus.CONFIRMADO,
+    changed_by_profile_id: profile.id,
+    notes: 'Retrabalho aceito pelo laboratorio.',
+  });
+
+  revalidateOrderRoutes(order.id);
+  if (order.parent_order_id) revalidateOrderRoutes(order.parent_order_id);
+  revalidatePath('/lab/stock');
+  return { success: true };
+}
+
+export async function rejectReworkOrderAction(input: z.infer<typeof reworkRejectPayloadSchema>) {
+  const parsed = reworkRejectPayloadSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Informe o motivo da rejeicao.' };
+
+  const context = await getProfileContext();
+  if ('error' in context) return { error: context.error };
+
+  const { supabase, profile } = context;
+  if (![UserRole.LAB_ADMIN, UserRole.LAB_USER].includes(profile.role)) {
+    return { error: 'Apenas usuarios do laboratorio podem rejeitar retrabalhos.' };
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id, status, parent_order_id, rework_status')
+    .eq('id', parsed.data.orderId)
+    .eq('lab_id', profile.lab_id)
+    .eq('order_type', 'rework')
+    .single();
+
+  if (orderError || !order) return { error: 'Retrabalho nao encontrado.' };
+  if (order.rework_status !== 'aguardando_aceite') return { error: 'Este retrabalho nao esta aguardando aceite.' };
+
+  const { error: updateError } = await supabase
+    .from('orders')
+    .update({
+      status: OrderStatus.CANCELADO,
+      rework_status: 'rejeitado',
+      rework_rejected_reason: parsed.data.reason,
+      internal_notes: parsed.data.reason,
+    })
+    .eq('id', order.id)
+    .eq('lab_id', profile.lab_id);
+
+  if (updateError) return { error: 'Nao foi possivel rejeitar o retrabalho.' };
+
+  await supabase.from('order_status_history').insert({
+    order_id: order.id,
+    lab_id: profile.lab_id,
+    old_status: order.status,
+    new_status: OrderStatus.CANCELADO,
+    changed_by_profile_id: profile.id,
+    notes: parsed.data.reason,
+  });
+
+  revalidateOrderRoutes(order.id);
+  if (order.parent_order_id) revalidateOrderRoutes(order.parent_order_id);
+  return { success: true };
 }
 
 export async function updateStoreOrderAction(orderId: string, payload: StoreOrderPayload) {
@@ -819,7 +1449,7 @@ export async function updateLabOrderStatusAction(input: z.infer<typeof updateSta
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .select('id, status, lab_id, internal_notes')
+    .select('id, status, lab_id, internal_notes, order_type, rework_status')
     .eq('id', parsed.data.orderId)
     .eq('lab_id', profile.lab_id)
     .single();
@@ -829,87 +1459,21 @@ export async function updateLabOrderStatusAction(input: z.infer<typeof updateSta
   const currentStatus = order.status as OrderStatus;
   const nextStatus = parsed.data.nextStatus;
 
+  if (order.order_type === 'rework' && order.rework_status === 'aguardando_aceite') {
+    return { error: 'Aceite o retrabalho antes de avancar o fluxo operacional.' };
+  }
+
   if (!canTransitionStatus(currentStatus, nextStatus, true)) {
     return { error: 'Esta transicao de status nao e permitida.' };
   }
 
   if (nextStatus === OrderStatus.CONFIRMADO) {
-    const { data: items, error: itemsError } = await supabase
-      .from('order_items')
-      .select('id, lens_variant_id, quantity, lens_variant:lens_variants(id, quantity_available, sku)')
-      .eq('order_id', order.id)
-      .eq('lab_id', profile.lab_id);
-
-    if (itemsError) return { error: 'Nao foi possivel validar o estoque dos itens.' };
-
-    for (const item of items || []) {
-      const variant = normalizeRelation(item.lens_variant as { id: string; quantity_available: number; sku: string } | { id: string; quantity_available: number; sku: string }[] | null);
-      if (!variant) continue;
-
-      if (Number(variant.quantity_available ?? 0) < Number(item.quantity ?? 0)) {
-        return { error: `Estoque insuficiente para confirmar este pedido. Ajuste o estoque ou edite o pedido. SKU: ${variant.sku}.` };
-      }
-    }
-
-    for (const item of items || []) {
-      const variant = normalizeRelation(item.lens_variant as { id: string; quantity_available: number; sku: string } | { id: string; quantity_available: number; sku: string }[] | null);
-      if (!variant) continue;
-
-      const newQuantity = Number(variant.quantity_available ?? 0) - Number(item.quantity ?? 0);
-      const { error: stockError } = await supabase
-        .from('lens_variants')
-        .update({ quantity_available: newQuantity })
-        .eq('id', variant.id)
-        .eq('lab_id', profile.lab_id);
-
-      if (stockError) return { error: `Nao foi possivel baixar o estoque do SKU ${variant.sku}.` };
-
-      await supabase.from('inventory_movements').insert({
-        lab_id: profile.lab_id,
-        lens_variant_id: variant.id,
-        movement_type: 'saida',
-        quantity: Number(item.quantity ?? 0),
-        reason: 'Confirmacao de pedido',
-        order_id: order.id,
-        created_by_profile_id: profile.id,
-      });
-    }
+    const stockResult = await deductStockForOrder(supabase, profile.lab_id, profile.id, order.id);
+    if (stockResult.error) return { error: stockResult.error };
   }
 
   if (nextStatus === OrderStatus.CANCELADO && currentStatus !== OrderStatus.AGUARDANDO_CONFIRMACAO) {
-    const { data: movements } = await supabase
-      .from('inventory_movements')
-      .select('lens_variant_id, quantity')
-      .eq('order_id', order.id)
-      .eq('lab_id', profile.lab_id)
-      .eq('movement_type', 'saida');
-
-    for (const movement of movements || []) {
-      const { data: variant } = await supabase
-        .from('lens_variants')
-        .select('id, quantity_available')
-        .eq('id', movement.lens_variant_id)
-        .eq('lab_id', profile.lab_id)
-        .single();
-
-      if (!variant) continue;
-
-      await supabase
-        .from('lens_variants')
-        .update({ quantity_available: Number(variant.quantity_available ?? 0) + Number(movement.quantity ?? 0) })
-        .eq('id', variant.id)
-        .eq('lab_id', profile.lab_id);
-
-      await supabase.from('inventory_movements').insert({
-        lab_id: profile.lab_id,
-        lens_variant_id: variant.id,
-        movement_type: 'cancelamento',
-        quantity: Number(movement.quantity ?? 0),
-        reason: 'Cancelamento de pedido',
-        order_id: order.id,
-        created_by_profile_id: profile.id,
-      });
-    }
+    await restoreStockForCanceledOrder(supabase, profile.lab_id, profile.id, order.id);
   }
 
   const updatePayload: Record<string, unknown> = {
