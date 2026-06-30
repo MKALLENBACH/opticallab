@@ -1,10 +1,53 @@
 'use client';
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  ArrowRight,
+  Check,
+  ClipboardCheck,
+  Copy,
+  Eye,
+  FileText,
+  Glasses,
+  Layers3,
+  ListChecks,
+  Lock,
+  PackageCheck,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Store,
+  TestTube2,
+  Upload,
+  Wand2,
+} from 'lucide-react';
+import Image from 'next/image';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 
-/* ═══════════════════════════════════════════════════════
-   COPY BUTTON
-   ═══════════════════════════════════════════════════════ */
+type DemoTab = 'access' | 'guide' | 'v2';
+
+interface AccessProfile {
+  title: string;
+  description: string;
+  email: string;
+  password: string;
+  accent: string;
+  icon: ReactNode;
+  highlights: string[];
+}
+
+interface V2Feature {
+  title: string;
+  short: string;
+  what: string;
+  when: string;
+  badges: string[];
+  icon: ReactNode;
+  steps: string[];
+  observe: string[];
+}
+
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -12,589 +55,1268 @@ function CopyButton({ text, label }: { text: string; label: string }) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.cssText = 'position:fixed;left:-9999px;opacity:0';
+      document.body.appendChild(textArea);
+      textArea.select();
       document.execCommand('copy');
-      document.body.removeChild(ta);
+      document.body.removeChild(textArea);
     }
+
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    window.setTimeout(() => setCopied(false), 1800);
   };
 
   return (
-    <button onClick={handleCopy} className="demo-copy-btn">
-      {copied ? (
-        <>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          <span style={{ color: '#10b981' }}>Copiado!</span>
-        </>
-      ) : (
-        <>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          <span>{label}</span>
-        </>
-      )}
+    <button type="button" className="demo-copy-button" onClick={handleCopy}>
+      {copied ? <Check size={15} /> : <Copy size={15} />}
+      <span>{copied ? 'Copiado' : label}</span>
     </button>
   );
 }
 
-/* ═══════════════════════════════════════════════════════
-   SMALL REUSABLE PIECES
-   ═══════════════════════════════════════════════════════ */
-function SectionHeading({ title, subtitle }: { title: string; subtitle?: string }) {
+function SectionHeading({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="demo-section-heading">
+      {eyebrow && <span className="demo-eyebrow">{eyebrow}</span>}
       <h2>{title}</h2>
       {subtitle && <p>{subtitle}</p>}
     </div>
   );
 }
 
-function FeatureCard({ emoji, title, text }: { emoji: string; title: string; text: string }) {
+function AccessCard({ profile }: { profile: AccessProfile }) {
   return (
-    <div className="demo-feature-card">
-      <span className="demo-feature-emoji">{emoji}</span>
-      <h4>{title}</h4>
-      <p>{text}</p>
-    </div>
-  );
-}
-
-function BulletList({ items, icon }: { items: string[]; icon?: ReactNode }) {
-  return (
-    <ul className="demo-bullet-list">
-      {items.map((item, i) => (
-        <li key={i}>
-          {icon ?? <span className="demo-bullet-dot" />}
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-const CheckIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-);
-
-const XIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-);
-
-const ExternalIcon = (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-);
-
-const ArrowDown = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
-);
-
-const EyeIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-);
-
-/* ═══════════════════════════════════════════════════════
-   ACCESS CARD
-   ═══════════════════════════════════════════════════════ */
-function AccessCard({
-  icon, title, description, email, password, features, accentColor,
-}: {
-  icon: ReactNode; title: string; description: string;
-  email: string; password: string; features: string[]; accentColor: string;
-}) {
-  return (
-    <div className="demo-access-card" style={{ borderTopColor: accentColor }}>
-      <div className="demo-access-header">
-        <div className="demo-icon-circle" style={{ background: `${accentColor}15` }}>{icon}</div>
-        <h3>{title}</h3>
+    <article className="demo-access-card" style={{ '--profile-accent': profile.accent } as CSSProperties}>
+      <div className="demo-access-card-header">
+        <span className="demo-icon-shell">{profile.icon}</span>
+        <div>
+          <h3>{profile.title}</h3>
+          <p>{profile.description}</p>
+        </div>
       </div>
-      <p className="demo-access-desc">{description}</p>
 
-      <div className="demo-cred-block">
-        <div className="demo-cred-row">
-          <span className="demo-cred-label">Email</span>
-          <div className="demo-cred-value-row">
-            <code>{email}</code>
-            <CopyButton text={email} label="Copiar email" />
+      <div className="demo-login-box">
+        <div className="demo-login-row">
+          <span>E-mail</span>
+          <div className="demo-login-value">
+            <code>{profile.email}</code>
+            <CopyButton text={profile.email} label="Copiar e-mail" />
           </div>
         </div>
-        <div className="demo-cred-row">
-          <span className="demo-cred-label">Senha</span>
-          <div className="demo-cred-value-row">
-            <code>{password}</code>
-            <CopyButton text={password} label="Copiar senha" />
+        <div className="demo-login-row">
+          <span>Senha</span>
+          <div className="demo-login-value">
+            <code>{profile.password}</code>
+            <CopyButton text={profile.password} label="Copiar senha" />
           </div>
         </div>
       </div>
 
-      <a href="https://lentelink.vercel.app/login" target="_blank" rel="noopener noreferrer"
-         className="demo-enter-btn" style={{ background: accentColor }}>
-        Entrar no sistema {ExternalIcon}
+      <a href="/login" className="demo-profile-action">
+        Acessar sistema <ArrowRight size={17} />
       </a>
 
-      <div className="demo-feature-list">
-        <span className="demo-feature-list-title">O que validar com esse acesso:</span>
-        {features.map((f, i) => (
-          <div key={i} className="demo-feature-item">{CheckIcon}<span>{f}</span></div>
+      <div className="demo-highlight-list">
+        <span>Use para testar</span>
+        {profile.highlights.map((item) => (
+          <p key={item}><Check size={16} />{item}</p>
         ))}
       </div>
+    </article>
+  );
+}
+
+function StepList({ items }: { items: string[] }) {
+  return (
+    <ol className="demo-step-list">
+      {items.map((item, index) => (
+        <li key={`${index}-${item}`}>
+          <span>{index + 1}</span>
+          <p>{item}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function CheckList({ items }: { items: string[] }) {
+  return (
+    <div className="demo-check-list">
+      {items.map((item) => (
+        <p key={item}><Eye size={16} />{item}</p>
+      ))}
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════
-   ICONS FOR LAB / STORE HEADERS
-   ═══════════════════════════════════════════════════════ */
-const LabIcon = (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#ig1)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <defs><linearGradient id="ig1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#818cf8"/><stop offset="100%" stopColor="#c084fc"/></linearGradient></defs>
-    <path d="M9 3h6v4l5 10H4L9 7V3z"/><line x1="9" y1="3" x2="15" y2="3"/><path d="M7 17h10"/>
-  </svg>
-);
-const StoreIcon = (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#ig2)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <defs><linearGradient id="ig2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#3b82f6"/><stop offset="100%" stopColor="#8b5cf6"/></linearGradient></defs>
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-  </svg>
-);
+function V2FeatureCard({ feature, isOpen, onToggle }: { feature: V2Feature; isOpen: boolean; onToggle: () => void }) {
+  return (
+    <article className="demo-v2-card">
+      <div className="demo-v2-card-top">
+        <span className="demo-v2-icon">{feature.icon}</span>
+        <div>
+          <div className="demo-badge-row">
+            {feature.badges.map((badge) => <span key={badge}>{badge}</span>)}
+          </div>
+          <h3>{feature.title}</h3>
+          <p>{feature.short}</p>
+        </div>
+      </div>
 
-/* ═══════════════════════════════════════════════════════
-   PAGE
-   ═══════════════════════════════════════════════════════ */
+      <div className="demo-v2-summary">
+        <div>
+          <strong>O que faz</strong>
+          <p>{feature.what}</p>
+        </div>
+        <div>
+          <strong>Quando usar</strong>
+          <p>{feature.when}</p>
+        </div>
+      </div>
+
+      <button type="button" className="demo-expand-button" onClick={onToggle} aria-expanded={isOpen}>
+        {isOpen ? 'Ocultar teste' : 'Ver como testar'}
+        <ArrowRight size={16} className={isOpen ? 'demo-expand-icon-open' : ''} />
+      </button>
+
+      {isOpen && (
+        <div className="demo-v2-details">
+          <div>
+            <h4>Como testar</h4>
+            <StepList items={feature.steps} />
+          </div>
+          <div>
+            <h4>O que observar</h4>
+            <CheckList items={feature.observe} />
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
 export default function DemoPage() {
+  const [activeTab, setActiveTab] = useState<DemoTab>('access');
+  const [openFeature, setOpenFeature] = useState('Pedido Especial');
 
-  /* ── data ── */
-  const steps = [
-    'Entre com o acesso do laboratório',
-    'Confira se a ótica Giori & Focari aparece cadastrada',
-    'Acesse o catálogo de lentes',
-    'Cadastre ou confira uma lente',
-    'Acesse o estoque',
-    'Cadastre ou confira um item de estoque',
-    'Saia da conta do laboratório',
-    'Entre com o acesso da ótica',
-    'Busque a lente cadastrada',
-    'Faça um pedido',
-    'Saia da conta da ótica',
-    'Entre novamente como laboratório',
-    'Veja o pedido recebido',
-    'Altere o status do pedido',
-    'Volte como ótica e confira se o status atualizou',
+  const accessProfiles: AccessProfile[] = useMemo(() => ([
+    {
+      title: 'Laboratório',
+      description: 'Use este acesso para cadastrar lentes, controlar estoque, receber pedidos, aprovar Pedidos Especiais e acompanhar retrabalhos.',
+      email: 'alexemetz@admin.com',
+      password: '123456',
+      accent: '#8b5cf6',
+      icon: <TestTube2 size={24} />,
+      highlights: [
+        'Cadastrar óticas parceiras',
+        'Cadastrar lentes e variações da lente',
+        'Controlar disponibilidade e prazos',
+        'Receber e acompanhar pedidos',
+        'Aprovar Pedido Especial',
+        'Aceitar ou rejeitar retrabalho',
+      ],
+    },
+    {
+      title: 'Ótica Giori & Focari',
+      description: 'Use este acesso para consultar lentes disponíveis, criar pedidos, anexar receita, solicitar Pedido Especial e acompanhar status.',
+      email: 'giorifocari@admin.com',
+      password: '123456',
+      accent: '#6366f1',
+      icon: <Store size={24} />,
+      highlights: [
+        'Consultar lentes disponíveis',
+        'Ver lentes em estoque e sob encomenda',
+        'Criar pedido com receita',
+        'Solicitar Pedido Especial',
+        'Abrir retrabalho em pedido finalizado',
+        'Acompanhar o andamento',
+      ],
+    },
+  ]), []);
+
+  const quickGuide = [
+    'Entre como laboratório.',
+    'Confira a ótica Giori & Focari cadastrada.',
+    'Cadastre uma nova lente ou revise uma lente existente.',
+    'Cadastre uma variação da lente no estoque.',
+    'Saia da conta do laboratório.',
+    'Entre como ótica.',
+    'Consulte as lentes disponíveis.',
+    'Crie um pedido e anexe a receita.',
+    'Volte como laboratório.',
+    'Abra o pedido recebido e atualize o andamento.',
+    'Volte como ótica e confira se o andamento mudou.',
   ];
 
   const checklist = [
-    'Ficou claro o papel do laboratório?',
-    'Ficou claro o papel da ótica?',
-    'A busca de lentes é fácil de usar?',
-    'As informações de estoque estão claras?',
-    'O prazo aparece quando não há pronta entrega?',
-    'O pedido é simples de fazer?',
-    'O status do pedido é fácil de acompanhar?',
-    'O sistema reduziria mensagens manuais no WhatsApp?',
-    'O sistema ajudaria a organizar a rotina?',
+    'O papel do laboratório ficou claro?',
+    'O papel da ótica ficou claro?',
+    'A busca de lentes está fácil de usar?',
+    'A diferença entre lente em estoque e sob encomenda está clara?',
+    'O envio de receita ficou simples?',
+    'O pedido é fácil de acompanhar?',
+    'O Pedido Especial ajuda quando a lente não é encontrada?',
+    'O retrabalho fica fácil de localizar?',
+    'O sistema reduziria mensagens manuais no atendimento?',
     'Faltou alguma informação importante para a operação real?',
   ];
 
-  const flowSteps = [
-    { emoji: '🏭', text: 'Laboratório cadastra lentes e estoque' },
-    { emoji: '🔍', text: 'Ótica consulta disponibilidade' },
-    { emoji: '📋', text: 'Ótica faz o pedido online' },
-    { emoji: '✅', text: 'Laboratório recebe e confirma' },
-    { emoji: '📱', text: 'Ótica acompanha o status' },
+  const v2Features: V2Feature[] = [
+    {
+      title: 'Pedido Especial',
+      short: 'Para quando a ótica não encontra exatamente a lente que precisa.',
+      what: 'A ótica informa as características da lente e envia a solicitação para o laboratório analisar.',
+      when: 'Use quando nenhuma lente disponível atende ao cliente.',
+      badges: ['Ótica', 'Laboratório', 'Pedidos'],
+      icon: <Sparkles size={24} />,
+      steps: [
+        'Entre como ótica.',
+        'Vá em Pedidos.',
+        'Clique em Pedido Especial.',
+        'Selecione as características da lente.',
+        'Preencha os dados da lente.',
+        'Anexe a receita.',
+        'Envie para o laboratório.',
+        'Entre como laboratório e veja o pedido recebido.',
+      ],
+      observe: [
+        'A ótica consegue iniciar a solicitação mesmo sem encontrar a lente exata.',
+        'O laboratório recebe o pedido para analisar.',
+        'O laboratório pode informar prazo.',
+        'O pedido fica acompanhado pelo sistema.',
+      ],
+    },
+    {
+      title: 'Conferência antes de criar Pedido Especial',
+      short: 'Antes de enviar, o sistema verifica se já existe uma lente compatível.',
+      what: 'Se encontrar uma lente parecida ou igual, a ótica pode usar a lente encontrada ou continuar com o Pedido Especial.',
+      when: 'Use para evitar pedidos duplicados e confirmar a escolha antes de enviar.',
+      badges: ['Ótica', 'Pedidos'],
+      icon: <Search size={24} />,
+      steps: [
+        'Entre como ótica.',
+        'Abra um Pedido Especial.',
+        'Preencha os dados de uma lente que já existe.',
+        'Avance no pedido.',
+        'Veja se aparece uma lente encontrada.',
+        'Escolha entre usar a lente encontrada ou continuar com Pedido Especial.',
+      ],
+      observe: [
+        'O sistema ajuda a evitar pedido duplicado.',
+        'A ótica confirma antes de seguir.',
+        'Nenhum pedido é criado sem essa decisão.',
+      ],
+    },
+    {
+      title: 'Receita obrigatória',
+      short: 'A ótica precisa anexar a receita do cliente antes de enviar o pedido.',
+      what: 'A receita pode ser enviada como imagem ou PDF. No celular, também é possível tirar uma foto.',
+      when: 'Use em pedidos normais, Pedidos Especiais e retrabalhos abertos pela ótica.',
+      badges: ['Ótica', 'Receita', 'Pedidos'],
+      icon: <Upload size={24} />,
+      steps: [
+        'Entre como ótica.',
+        'Tente criar um pedido sem anexar receita.',
+        'Veja que o sistema bloqueia o envio.',
+        'Anexe uma imagem ou PDF.',
+        'Envie o pedido.',
+        'Entre como laboratório.',
+        'Abra o pedido e confira a receita anexada.',
+      ],
+      observe: [
+        'Pedido normal exige receita.',
+        'Pedido Especial exige receita.',
+        'Retrabalho aberto pela ótica exige receita.',
+        'O laboratório consegue visualizar a receita.',
+        'No celular, é possível anexar foto da câmera.',
+      ],
+    },
+    {
+      title: 'Retrabalho',
+      short: 'Para quando um pedido finalizado precisa voltar para ajuste ou ser refeito.',
+      what: 'A ótica ou o laboratório podem abrir um novo acompanhamento a partir de um pedido finalizado.',
+      when: 'Use quando uma lente voltou para ajuste ou precisa ser refeita.',
+      badges: ['Ótica', 'Laboratório', 'Retrabalho'],
+      icon: <RefreshCw size={24} />,
+      steps: [
+        'Entre como ótica.',
+        'Abra um pedido finalizado.',
+        'Clique em Abrir Retrabalho.',
+        'Escolha o motivo.',
+        'Selecione qual lente precisa ser refeita.',
+        'Anexe a receita.',
+        'Envie para o laboratório.',
+        'Entre como laboratório e aceite ou rejeite.',
+      ],
+      observe: [
+        'O pedido original continua finalizado.',
+        'O retrabalho aparece como um novo acompanhamento.',
+        'Se a ótica abriu, o laboratório precisa aceitar.',
+        'Se o laboratório abriu, o retrabalho já começa aceito.',
+      ],
+    },
+    {
+      title: 'Trocar lente no Retrabalho',
+      short: 'Ao refazer um pedido, dá para manter a mesma lente, escolher outra ou solicitar Pedido Especial.',
+      what: 'Cada lente do pedido pode ter uma decisão diferente durante o retrabalho.',
+      when: 'Use quando a lente original não deve ser repetida exatamente igual.',
+      badges: ['Retrabalho', 'Lentes'],
+      icon: <Wand2 size={24} />,
+      steps: [
+        'Abra um pedido finalizado.',
+        'Clique em Abrir Retrabalho.',
+        'Selecione uma lente do pedido.',
+        'Escolha refazer com a mesma lente.',
+        'Ou escolha outra lente disponível.',
+        'Ou solicite Pedido Especial se não houver lente adequada.',
+        'Continue o fluxo.',
+      ],
+      observe: [
+        'O pedido original fica preservado.',
+        'O retrabalho mostra qual lente será refeita.',
+        'O laboratório consegue acompanhar a solicitação.',
+      ],
+    },
+    {
+      title: 'Novas opções no cadastro de lentes',
+      short: 'O laboratório pode criar suas próprias marcas, materiais, categorias, índices e tratamentos.',
+      what: 'Ao cadastrar uma lente, se a opção não existir, escolha Outro e salve um novo valor.',
+      when: 'Use quando o laboratório trabalha com uma marca, material ou tratamento que não aparece na lista.',
+      badges: ['Laboratório', 'Cadastro'],
+      icon: <Plus size={24} />,
+      steps: [
+        'Entre como laboratório.',
+        'Vá para o cadastro de lentes.',
+        'Em algum campo, escolha Outro.',
+        'Cadastre uma nova marca, material ou tratamento.',
+        'Salve a lente.',
+        'Crie outra lente.',
+        'Veja que a nova opção aparece para usar novamente.',
+      ],
+      observe: [
+        'O laboratório não fica preso às opções padrão.',
+        'A opção nova fica salva.',
+        'A opção aparece em cadastros futuros.',
+        'Outro laboratório não vê essa opção.',
+      ],
+    },
+    {
+      title: 'Motivos personalizados de Retrabalho',
+      short: 'O laboratório pode cadastrar novos motivos para explicar por que o pedido voltou.',
+      what: 'Além de Erro de Médico, o laboratório pode criar motivos que façam sentido para sua rotina.',
+      when: 'Use quando o laboratório precisa organizar melhor os tipos de retrabalho.',
+      badges: ['Laboratório', 'Retrabalho'],
+      icon: <ClipboardCheck size={24} />,
+      steps: [
+        'Entre como laboratório.',
+        'Abra o fluxo de Retrabalho.',
+        'No campo motivo, escolha Outro.',
+        'Cadastre um novo motivo.',
+        'Salve.',
+        'Abra outro retrabalho.',
+        'Veja que o motivo novo aparece na lista.',
+      ],
+      observe: [
+        'O laboratório cria seus próprios motivos.',
+        'As óticas vinculadas conseguem usar esses motivos.',
+        'Outros laboratórios não veem esses motivos.',
+      ],
+    },
+    {
+      title: 'Listas mais organizadas',
+      short: 'As telas com muitas informações agora são divididas em páginas.',
+      what: 'O sistema mostra uma quantidade por vez e permite avançar ou voltar.',
+      when: 'Use em listas de pedidos, estoque, lentes e óticas.',
+      badges: ['Laboratório', 'Organização'],
+      icon: <ListChecks size={24} />,
+      steps: [
+        'Entre como laboratório.',
+        'Acesse uma lista com muitos registros.',
+        'Veja os botões de próxima página e página anterior.',
+        'Avance e volte nas páginas.',
+        'Use a busca da tela.',
+        'Confira se a lista continua organizada.',
+      ],
+      observe: [
+        'A navegação fica mais rápida.',
+        'A tela não fica carregada demais.',
+        'É possível avançar e voltar nas páginas.',
+      ],
+    },
   ];
 
-  const beforeItems = [
-    'Pedido pelo WhatsApp',
-    'Resposta manual sobre estoque',
-    'Informações espalhadas',
-    'Dificuldade para acompanhar status',
-    'Mais chance de erro',
+  const quickV2Roadmap = [
+    'Entre como laboratório.',
+    'Cadastre uma nova lente.',
+    'Use Outro para criar uma nova opção personalizada.',
+    'Entre como ótica.',
+    'Consulte as lentes disponíveis.',
+    'Crie um pedido normal anexando receita.',
+    'Crie um Pedido Especial quando não encontrar uma lente.',
+    'Entre como laboratório e analise o Pedido Especial.',
+    'Finalize um pedido.',
+    'Abra um Retrabalho.',
+    'Teste os botões de próxima página nas listas.',
   ];
 
-  const afterItems = [
-    'Consulta de lentes online',
-    'Estoque e prazos organizados',
-    'Pedido feito pela ótica',
-    'Status acompanhado no sistema',
-    'Histórico completo por ótica',
-  ];
-
-  /* ── render ── */
   return (
     <>
-      {/* injected scoped styles */}
       <style>{cssText}</style>
 
-      <div className="demo-page">
-        {/* BG orbs */}
-        <div className="demo-orb demo-orb-1" />
-        <div className="demo-orb demo-orb-2" />
-        <div className="demo-orb demo-orb-3" />
-
-        {/* ─── HEADER ─── */}
-        <header className="demo-header">
-          <img src="/logo.svg" alt="LenteLink" className="demo-logo" />
+      <main className="demo-page">
+        <header className="demo-topbar">
+          <Image src="/logo.svg" alt="LenteLink" width={170} height={34} priority />
+          <a href="/login" className="demo-topbar-link">Acessar sistema</a>
         </header>
 
-        {/* ─── HERO ─── */}
         <section className="demo-hero">
-          <div className="demo-badge"><span className="demo-badge-dot" />Ambiente de demonstração</div>
-          <h1>Demonstração <span className="demo-gradient-text">LenteLink</span></h1>
-          <p className="demo-hero-sub">
-            O LenteLink é um portal online que conecta o laboratório às óticas parceiras, permitindo
-            consultar lentes, verificar estoque, fazer pedidos e acompanhar o andamento em tempo real.
-          </p>
-          <p className="demo-hero-extra">
-            A ideia é reduzir pedidos perdidos no WhatsApp, agilizar o atendimento e dar mais controle
-            para o laboratório e para as óticas.
-          </p>
-          <a href="https://lentelink.vercel.app/login" target="_blank" rel="noopener noreferrer" className="demo-cta">
-            Acessar sistema {ExternalIcon}
-          </a>
-        </section>
-
-        {/* ─── O QUE É ─── */}
-        <section className="demo-section">
-          <SectionHeading title="O que é o LenteLink?" />
-          <p className="demo-body-text">
-            O LenteLink é um sistema online para laboratórios ópticos atenderem suas óticas parceiras
-            de forma mais organizada. Pelo sistema, o laboratório cadastra lentes, estoque e prazos.
-            A ótica acessa com login próprio, consulta disponibilidade e faz pedidos diretamente pela
-            plataforma.
-          </p>
-          <div className="demo-features-grid">
-            <FeatureCard emoji="📦" title="Catálogo de lentes" text="O laboratório organiza os tipos de lentes que trabalha." />
-            <FeatureCard emoji="📊" title="Estoque e prazos" text="A ótica consegue ver se a lente está pronta entrega ou se depende de produção." />
-            <FeatureCard emoji="🛒" title="Pedidos online" text="A ótica faz o pedido direto pelo sistema, sem depender apenas do WhatsApp." />
-            <FeatureCard emoji="📍" title="Acompanhamento" text="Laboratório e ótica acompanham o status do pedido até a finalização." />
-          </div>
-        </section>
-
-        {/* ─── PROBLEMA ─── */}
-        <section className="demo-section">
-          <SectionHeading title="Qual problema o sistema resolve?" />
-          <p className="demo-body-text">
-            Muitos laboratórios ainda recebem pedidos por WhatsApp, ligação ou mensagens soltas.
-            Isso pode gerar demora no atendimento, erro de informação, pedido perdido e falta de histórico.
-          </p>
-          <div className="demo-compare-grid">
-            <div className="demo-compare-card demo-compare-before">
-              <h4><span className="demo-compare-label demo-compare-label-before">Antes</span></h4>
-              <ul>{beforeItems.map((t, i) => <li key={i}>{XIcon}<span>{t}</span></li>)}</ul>
-            </div>
-            <div className="demo-compare-card demo-compare-after">
-              <h4><span className="demo-compare-label demo-compare-label-after">Com LenteLink</span></h4>
-              <ul>{afterItems.map((t, i) => <li key={i}>{CheckIcon}<span>{t}</span></li>)}</ul>
+          <div className="demo-hero-content">
+            <span className="demo-hero-badge"><ShieldCheck size={16} /> Ambiente de demonstração</span>
+            <h1>Demonstração LenteLink</h1>
+            <p>
+              Teste o fluxo entre laboratório e ótica: cadastro de lentes, consulta de disponibilidade,
+              pedidos, Pedidos Especiais, retrabalho e acompanhamento.
+            </p>
+            <p className="demo-hero-note">
+              Use os acessos abaixo para entrar como laboratório ou como ótica e simular o funcionamento real do sistema.
+            </p>
+            <div className="demo-hero-actions">
+              <a href="/login" className="demo-primary-action">Acessar sistema <ArrowRight size={18} /></a>
+              <button type="button" className="demo-secondary-action" onClick={() => setActiveTab('v2')}>
+                Ver novidades V2 <Sparkles size={17} />
+              </button>
             </div>
           </div>
         </section>
 
-        {/* ─── COMO FUNCIONA ─── */}
-        <section className="demo-section">
-          <SectionHeading title="Como funciona na prática?" />
-          <div className="demo-flow">
-            {flowSteps.map((s, i) => (
-              <div key={i}>
-                <div className="demo-flow-step">
-                  <span className="demo-flow-num">{i + 1}</span>
-                  <span className="demo-flow-emoji">{s.emoji}</span>
-                  <span className="demo-flow-text">{s.text}</span>
+        <nav className="demo-tabs" aria-label="Navegação da demonstração">
+          {[
+            { value: 'access' as const, label: 'Acessos da Demonstração', icon: <Lock size={17} /> },
+            { value: 'guide' as const, label: 'Como testar', icon: <PackageCheck size={17} /> },
+            { value: 'v2' as const, label: 'Novidades V2', icon: <Sparkles size={17} /> },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              className={activeTab === tab.value ? 'demo-tab demo-tab-active' : 'demo-tab'}
+              onClick={() => setActiveTab(tab.value)}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        {activeTab === 'access' && (
+          <section className="demo-section">
+            <SectionHeading
+              eyebrow="Acessos"
+              title="Entre pelos dois lados da operação"
+              subtitle="Teste primeiro como laboratório e depois como ótica para entender a jornada completa."
+            />
+
+            <div className="demo-access-grid">
+              {accessProfiles.map((profile) => <AccessCard key={profile.email} profile={profile} />)}
+            </div>
+
+            <div className="demo-role-panel">
+              <div>
+                <Glasses size={24} />
+                <h3>O que o laboratório faz</h3>
+                <p>Cadastra lentes, controla disponibilidade, recebe pedidos, analisa Pedidos Especiais e acompanha retrabalhos.</p>
+              </div>
+              <div>
+                <Store size={24} />
+                <h3>O que a ótica faz</h3>
+                <p>Consulta lentes, cria pedidos com receita, solicita Pedido Especial e acompanha o andamento com mais clareza.</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'guide' && (
+          <section className="demo-section">
+            <SectionHeading
+              eyebrow="Roteiro"
+              title="Como testar em poucos minutos"
+              subtitle="Siga esta sequência simples para simular o atendimento entre laboratório e ótica."
+            />
+
+            <div className="demo-guide-layout">
+              <div className="demo-guide-card">
+                <h3>Passo a passo rápido</h3>
+                <StepList items={quickGuide} />
+              </div>
+              <div className="demo-guide-card">
+                <h3>O que observar</h3>
+                <CheckList items={checklist} />
+              </div>
+            </div>
+
+            <div className="demo-info-strip">
+              <FileText size={20} />
+              <p>
+                Dica: se ainda não houver uma lente para testar, comece pelo laboratório cadastrando uma lente
+                e uma variação dela. Depois entre como ótica e faça o pedido.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'v2' && (
+          <section className="demo-section">
+            <SectionHeading
+              eyebrow="Novidades"
+              title="Novidades da Demonstração V2"
+              subtitle="Conheça os novos fluxos do LenteLink e veja sugestões simples para testar cada funcionalidade."
+            />
+
+            <div className="demo-v2-intro">
+              <Sparkles size={24} />
+              <p>
+                Nesta versão, a demonstração ficou mais completa. Agora você consegue testar pedidos com receita
+                obrigatória, Pedido Especial quando a lente não é encontrada, Retrabalho para pedidos já finalizados,
+                novas opções no cadastro de lentes e listas mais organizadas.
+              </p>
+              <strong>Dica: teste primeiro como laboratório e depois como ótica para entender os dois lados da operação.</strong>
+            </div>
+
+            <div className="demo-v2-grid">
+              {v2Features.map((feature) => (
+                <V2FeatureCard
+                  key={feature.title}
+                  feature={feature}
+                  isOpen={openFeature === feature.title}
+                  onToggle={() => setOpenFeature((current) => current === feature.title ? '' : feature.title)}
+                />
+              ))}
+            </div>
+
+            <div className="demo-roadmap">
+              <div className="demo-roadmap-header">
+                <Layers3 size={24} />
+                <div>
+                  <h3>Roteiro rápido de teste</h3>
+                  <p>Uma sequência para validar as novidades como se fosse uma operação real.</p>
                 </div>
-                {i < flowSteps.length - 1 && <div className="demo-flow-arrow">{ArrowDown}</div>}
               </div>
-            ))}
-          </div>
-          <p className="demo-body-text" style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-            O objetivo é transformar o relacionamento entre laboratório e ótica em um processo mais
-            rápido, organizado e fácil de acompanhar.
-          </p>
-        </section>
-
-        {/* ─── LADO DO LABORATÓRIO ─── */}
-        <section className="demo-section">
-          <div className="demo-role-grid">
-            <div className="demo-role-card">
-              <div className="demo-role-header">
-                <div className="demo-icon-circle" style={{ background: 'rgba(139,92,246,0.12)' }}>{LabIcon}</div>
-                <h3>O lado do laboratório</h3>
-              </div>
-              <p>No acesso do laboratório, a equipe consegue organizar a operação e acompanhar os pedidos recebidos das óticas.</p>
-              <BulletList items={[
-                'Ver painel inicial',
-                'Cadastrar óticas parceiras',
-                'Cadastrar e editar lentes',
-                'Cadastrar e editar estoque',
-                'Ver pedidos recebidos',
-                'Atualizar status dos pedidos',
-                'Acompanhar o andamento da operação',
-              ]} />
+              <StepList items={quickV2Roadmap} />
+              <p className="demo-roadmap-footer">
+                Esse roteiro simula uma operação real entre ótica e laboratório, desde o cadastro da lente
+                até o pedido, análise, retrabalho e acompanhamento.
+              </p>
             </div>
-            <div className="demo-role-card">
-              <div className="demo-role-header">
-                <div className="demo-icon-circle" style={{ background: 'rgba(99,102,241,0.12)' }}>{StoreIcon}</div>
-                <h3>O lado da ótica</h3>
-              </div>
-              <p>No acesso da ótica, a equipe consegue consultar lentes e fazer pedidos de forma simples.</p>
-              <BulletList items={[
-                'Ver painel inicial',
-                'Buscar lentes',
-                'Conferir disponibilidade',
-                'Ver prazo de produção',
-                'Fazer pedido',
-                'Acompanhar status',
-                'Consultar histórico de pedidos',
-              ]} />
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        {/* ─── ACESSOS ─── */}
-        <section className="demo-section">
-          <SectionHeading
-            title="Acessos para teste"
-            subtitle="Agora que você entendeu o fluxo, use os acessos abaixo para testar os dois lados do sistema: primeiro como laboratório e depois como ótica."
-          />
-          <div className="demo-cards-grid">
-            <AccessCard
-              icon={LabIcon}
-              title="Acesso do Laboratório"
-              description="Use este acesso para ver o lado do laboratório: cadastro de óticas, catálogo de lentes, estoque e pedidos recebidos."
-              email="alexemetz@admin.com"
-              password="123456"
-              accentColor="#8b5cf6"
-              features={[
-                'Ver o painel inicial',
-                'Conferir a ótica Giori & Focari',
-                'Cadastrar ou editar lentes',
-                'Cadastrar ou editar estoque',
-                'Ver pedidos recebidos',
-                'Atualizar status dos pedidos',
-              ]}
-            />
-            <AccessCard
-              icon={StoreIcon}
-              title="Acesso da Ótica — Giori & Focari"
-              description="Use este acesso para ver o lado da ótica: busca de lentes, disponibilidade em estoque, criação e acompanhamento de pedidos."
-              email="giorifocari@admin.com"
-              password="123456"
-              accentColor="#6366f1"
-              features={[
-                'Ver o painel da ótica',
-                'Buscar lentes disponíveis',
-                'Conferir quantidade em estoque',
-                'Ver prazo quando não houver pronta entrega',
-                'Criar pedido de lentes',
-                'Acompanhar status do pedido',
-                'Ver histórico de pedidos',
-              ]}
-            />
-          </div>
-        </section>
-
-        {/* ─── ROTEIRO ─── */}
-        <section className="demo-section">
-          <SectionHeading
-            title="Como testar em poucos minutos"
-            subtitle="Siga este roteiro para entender o fluxo completo entre laboratório e ótica."
-          />
-          <div className="demo-steps-grid">
-            {steps.map((s, i) => (
-              <div key={i} className="demo-step-item">
-                <div className="demo-step-num">{i + 1}</div>
-                <span>{s}</span>
-              </div>
-            ))}
-          </div>
-          <div className="demo-tip">
-            <span className="demo-tip-icon">💡</span>
-            <p>
-              Caso ainda não existam lentes cadastradas, primeiro use o acesso do laboratório para
-              cadastrar uma lente e um item de estoque. Depois use o acesso da ótica para testar a
-              busca e o pedido.
-            </p>
-          </div>
-        </section>
-
-        {/* ─── CHECKLIST ─── */}
-        <section className="demo-section">
-          <SectionHeading
-            title="O que observar durante a demonstração"
-            subtitle="Enquanto navega pelo sistema, observe os pontos abaixo."
-          />
-          <div className="demo-checklist-grid">
-            {checklist.map((c, i) => (
-              <div key={i} className="demo-checklist-item">{EyeIcon}<span>{c}</span></div>
-            ))}
-          </div>
-        </section>
-
-        {/* ─── FEEDBACK ─── */}
-        <section className="demo-section">
-          <div className="demo-feedback-card">
-            <h3>Depois do teste</h3>
-            <p>
-              Depois de navegar pelo sistema, envie suas dúvidas, sugestões e pontos de melhoria.
-              A ideia dessa demonstração é validar se o fluxo faz sentido para a operação real
-              antes da versão final.
-            </p>
-            <a href="https://wa.me/?text=Ol%C3%A1!%20Testei%20o%20LenteLink%20e%20gostaria%20de%20enviar%20meu%20feedback." target="_blank" rel="noopener noreferrer" className="demo-feedback-btn">
-              💬 Enviar feedback
-            </a>
-          </div>
-        </section>
-
-        {/* ─── DISCLAIMER ─── */}
-        <section className="demo-section" style={{ paddingBottom: '0.5rem' }}>
-          <div className="demo-disclaimer">
-            Esta é uma <strong>versão de demonstração</strong>. O objetivo é validar se o fluxo
-            faz sentido para a operação real e levantar ajustes antes da versão final.
-          </div>
-        </section>
-
-        {/* ─── FOOTER ─── */}
         <footer className="demo-footer">
-          <img src="/logo.svg" alt="LenteLink" style={{ height: 28, opacity: 0.5 }} />
-          <span>© {new Date().getFullYear()} LenteLink — Todos os direitos reservados.</span>
+          <Image src="/logo.svg" alt="LenteLink" width={150} height={30} />
+          <span>© {new Date().getFullYear()} LenteLink. Todos os direitos reservados.</span>
         </footer>
-      </div>
+      </main>
     </>
   );
 }
 
-/* ═══════════════════════════════════════════════════════
-   CSS  (scoped via className prefix "demo-")
-   ═══════════════════════════════════════════════════════ */
 const cssText = `
-/* ── page ── */
-.demo-page{position:relative;min-height:100vh;overflow-x:hidden;background:#08090f}
+.demo-page{
+  min-height:100vh;
+  overflow-x:hidden;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(99,102,241,.18), transparent 34rem),
+    radial-gradient(circle at 92% 12%, rgba(168,85,247,.15), transparent 30rem),
+    linear-gradient(180deg,#070914 0%,#090b14 48%,#070914 100%);
+  color:#f8fafc;
+}
 
-/* orbs */
-.demo-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
-.demo-orb-1{top:-18%;right:-8%;width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,.08) 0%,transparent 70%)}
-.demo-orb-2{bottom:-12%;left:-8%;width:500px;height:500px;background:radial-gradient(circle,rgba(139,92,246,.06) 0%,transparent 70%)}
-.demo-orb-3{top:45%;left:50%;transform:translate(-50%,-50%);width:900px;height:900px;background:radial-gradient(circle,rgba(99,102,241,.025) 0%,transparent 55%)}
+.demo-topbar{
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  width:min(1120px,calc(100% - 2rem));
+  margin:0 auto;
+  padding:1.25rem 0;
+}
 
-/* ── header ── */
-.demo-header{position:relative;z-index:10;display:flex;justify-content:center;padding:2rem 1.5rem 0}
-.demo-logo{height:36px}
+.demo-topbar img,.demo-footer img{height:34px;width:auto}
 
-/* ── hero ── */
-.demo-hero{position:relative;z-index:10;text-align:center;max-width:740px;margin:0 auto;padding:2.5rem 1.5rem 1.5rem}
-.demo-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:9999px;padding:.35rem 1rem;font-size:.8125rem;font-weight:500;color:#a5b4fc;margin-bottom:1.25rem}
-.demo-badge-dot{width:6px;height:6px;border-radius:50%;background:#6366f1;display:inline-block}
-.demo-hero h1{font-size:clamp(2rem,5vw,3rem);font-weight:800;line-height:1.15;letter-spacing:-.03em;color:#f0f2f7;margin:0 0 1rem}
-.demo-gradient-text{background:linear-gradient(135deg,#6366f1 0%,#a855f7 50%,#c084fc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.demo-hero-sub{font-size:clamp(.975rem,2.5vw,1.125rem);color:#94a3b8;line-height:1.75;max-width:620px;margin:0 auto 1rem}
-.demo-hero-extra{font-size:.9375rem;color:#64748b;line-height:1.7;max-width:560px;margin:0 auto 2rem;font-style:italic}
-.demo-cta{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:600;font-size:1rem;padding:.875rem 2rem;border-radius:.75rem;text-decoration:none;box-shadow:0 4px 20px rgba(99,102,241,.3);transition:transform .2s,box-shadow .2s}
-.demo-cta:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,.4)}
+.demo-topbar-link{
+  display:inline-flex;
+  min-height:42px;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;
+  padding:0 .95rem;
+  color:#dbeafe;
+  font-size:.88rem;
+  font-weight:800;
+  text-decoration:none;
+  background:rgba(15,23,42,.52);
+}
 
-/* ── sections ── */
-.demo-section{position:relative;z-index:10;max-width:920px;margin:0 auto;padding:2.5rem 1.5rem}
-.demo-section-heading{text-align:center;margin-bottom:1.75rem}
-.demo-section-heading h2{font-size:clamp(1.375rem,3vw,1.75rem);font-weight:700;letter-spacing:-.025em;color:#f0f2f7;margin:0 0 .4rem}
-.demo-section-heading p{color:#94a3b8;font-size:.9375rem;max-width:600px;margin:0 auto;line-height:1.65}
-.demo-body-text{color:#94a3b8;font-size:.9375rem;line-height:1.75;max-width:700px;margin:0 auto 1.75rem;text-align:center}
+.demo-hero{
+  width:min(1120px,calc(100% - 2rem));
+  margin:0 auto;
+  padding:3.25rem 0 1.5rem;
+}
 
-/* ── feature cards 2×2 ── */
-.demo-features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:1rem}
-.demo-feature-card{background:rgba(18,20,28,.65);border:1px solid rgba(255,255,255,.05);border-radius:.875rem;padding:1.25rem;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)}
-.demo-feature-emoji{font-size:1.75rem;display:block;margin-bottom:.5rem}
-.demo-feature-card h4{font-size:.9375rem;font-weight:600;color:#e2e8f0;margin:0 0 .35rem}
-.demo-feature-card p{font-size:.8125rem;color:#94a3b8;line-height:1.55;margin:0}
+.demo-hero-content{
+  max-width:850px;
+}
 
-/* ── compare ── */
-.demo-compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:1.25rem}
-.demo-compare-card{background:rgba(18,20,28,.65);border:1px solid rgba(255,255,255,.05);border-radius:.875rem;padding:1.5rem;box-shadow:0 4px 15px rgba(0,0,0,.2)}
-.demo-compare-card h4{margin:0 0 1rem}
-.demo-compare-card ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.6rem}
-.demo-compare-card li{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:#cbd5e1;line-height:1.45}
-.demo-compare-label{display:inline-block;padding:.25rem .75rem;border-radius:9999px;font-size:.75rem;font-weight:600;letter-spacing:.03em}
-.demo-compare-label-before{background:rgba(248,113,113,.12);color:#fca5a5}
-.demo-compare-label-after{background:rgba(99,102,241,.12);color:#a5b4fc}
-.demo-compare-before{border-top:3px solid rgba(248,113,113,.4)}
-.demo-compare-after{border-top:3px solid rgba(99,102,241,.5)}
+.demo-hero-badge,.demo-eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  width:max-content;
+  max-width:100%;
+  border:1px solid rgba(139,92,246,.28);
+  border-radius:999px;
+  background:rgba(139,92,246,.12);
+  color:#c4b5fd;
+  padding:.38rem .75rem;
+  font-size:.76rem;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
 
-/* ── flow ── */
-.demo-flow{display:flex;flex-direction:column;align-items:center}
-.demo-flow-step{display:flex;align-items:center;gap:.75rem;background:rgba(18,20,28,.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.06);border-radius:.75rem;padding:.875rem 1.25rem;min-width:min(100%,420px);box-shadow:0 4px 15px rgba(0,0,0,.2)}
-.demo-flow-num{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
-.demo-flow-emoji{font-size:1.35rem;flex-shrink:0}
-.demo-flow-text{font-size:.9rem;color:#e2e8f0;font-weight:500}
-.demo-flow-arrow{display:flex;justify-content:center;padding:.35rem 0;opacity:.45}
+.demo-hero h1{
+  margin:1rem 0 .8rem;
+  max-width:760px;
+  color:#fff;
+  font-size:clamp(2.35rem,6vw,5rem);
+  line-height:.98;
+  font-weight:950;
+  letter-spacing:0;
+}
 
-/* ── role cards ── */
-.demo-role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:1.25rem}
-.demo-role-card{background:rgba(18,20,28,.65);border:1px solid rgba(255,255,255,.05);border-radius:.875rem;padding:1.5rem;box-shadow:0 4px 15px rgba(0,0,0,.2)}
-.demo-role-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}
-.demo-role-header h3{font-size:1.0625rem;font-weight:700;color:#f0f2f7;margin:0}
-.demo-role-card>p{color:#94a3b8;font-size:.875rem;line-height:1.65;margin:0 0 1rem}
-.demo-icon-circle{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.demo-hero p{
+  max-width:760px;
+  margin:0;
+  color:#cbd5e1;
+  font-size:clamp(1rem,2vw,1.22rem);
+  line-height:1.72;
+  font-weight:560;
+}
 
-/* bullet list */
-.demo-bullet-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.45rem}
-.demo-bullet-list li{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:#cbd5e1}
-.demo-bullet-dot{width:6px;height:6px;border-radius:50%;background:#6366f1;flex-shrink:0}
+.demo-hero-note{
+  margin-top:1rem!important;
+  max-width:650px!important;
+  color:#94a3b8!important;
+  font-size:.98rem!important;
+}
 
-/* ── access cards ── */
-.demo-cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:1.5rem}
-.demo-access-card{background:rgba(18,20,28,.7);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.06);border-top:3px solid;border-radius:1rem;padding:1.75rem;box-shadow:0 8px 30px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)}
-.demo-access-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}
-.demo-access-header h3{font-size:1.0625rem;font-weight:700;color:#f0f2f7;margin:0}
-.demo-access-desc{color:#94a3b8;font-size:.875rem;line-height:1.6;margin:0 0 1.25rem}
+.demo-hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.8rem;
+  margin-top:1.7rem;
+}
 
-/* credentials */
-.demo-cred-block{background:rgba(2,6,23,.5);border:1px solid rgba(255,255,255,.06);border-radius:.75rem;padding:1rem;display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem}
-.demo-cred-row{display:flex;flex-direction:column;gap:.25rem}
-.demo-cred-label{font-size:.7rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
-.demo-cred-value-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
-.demo-cred-value-row code{font-size:.9rem;color:#e2e8f0;font-family:'JetBrains Mono','Fira Code',monospace;background:rgba(99,102,241,.08);padding:.2rem .6rem;border-radius:.375rem;border:1px solid rgba(99,102,241,.15);word-break:break-all}
-.demo-copy-btn{display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:.5rem;padding:.35rem .7rem;font-size:.7rem;font-weight:500;color:#cbd5e1;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit}
-.demo-copy-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
-.demo-enter-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.75rem 1.5rem;border-radius:.75rem;color:#fff;font-weight:600;font-size:.9375rem;text-decoration:none;transition:all .2s;box-shadow:0 4px 15px rgba(99,102,241,.25);margin-bottom:1.25rem}
-.demo-enter-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.demo-primary-action,.demo-secondary-action,.demo-profile-action,.demo-expand-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.5rem;
+  border:0;
+  border-radius:12px;
+  font-family:inherit;
+  font-weight:900;
+  text-decoration:none;
+  cursor:pointer;
+  transition:transform .18s ease, border-color .18s ease, background .18s ease;
+}
 
-/* feature list */
-.demo-feature-list{display:flex;flex-direction:column;gap:.45rem}
-.demo-feature-list-title{font-size:.7rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem}
-.demo-feature-item{display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:#cbd5e1;line-height:1.45}
+.demo-primary-action{
+  min-height:48px;
+  padding:0 1.15rem;
+  color:#fff;
+  background:linear-gradient(135deg,#4f46e5,#9333ea);
+  box-shadow:0 20px 45px -28px rgba(139,92,246,1);
+}
 
-/* ── steps ── */
-.demo-steps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:.65rem;margin-bottom:1.5rem}
-.demo-step-item{display:flex;align-items:flex-start;gap:.75rem;background:rgba(18,20,28,.5);border:1px solid rgba(255,255,255,.04);border-radius:.75rem;padding:.8rem 1rem;font-size:.85rem;color:#cbd5e1;line-height:1.5}
-.demo-step-num{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.demo-secondary-action{
+  min-height:48px;
+  padding:0 1.05rem;
+  color:#e0e7ff;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(15,23,42,.58);
+}
 
-/* tip */
-.demo-tip{display:flex;align-items:flex-start;gap:.75rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:.75rem;padding:1rem 1.25rem}
-.demo-tip-icon{font-size:1.2rem;flex-shrink:0;line-height:1.55}
-.demo-tip p{font-size:.85rem;color:#fde68a;line-height:1.6;margin:0}
+.demo-primary-action:hover,.demo-secondary-action:hover,.demo-profile-action:hover,.demo-expand-button:hover{
+  transform:translateY(-1px);
+}
 
-/* ── checklist ── */
-.demo-checklist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:.65rem}
-.demo-checklist-item{display:flex;align-items:flex-start;gap:.65rem;background:rgba(18,20,28,.5);border:1px solid rgba(255,255,255,.04);border-radius:.75rem;padding:.8rem 1rem;font-size:.85rem;color:#cbd5e1;line-height:1.5}
+.demo-tabs{
+  position:sticky;
+  top:0;
+  z-index:5;
+  display:flex;
+  gap:.5rem;
+  width:min(1120px,calc(100% - 2rem));
+  margin:1.5rem auto 0;
+  padding:.5rem;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;
+  background:rgba(6,8,18,.82);
+  backdrop-filter:blur(18px);
+}
 
-/* ── feedback ── */
-.demo-feedback-card{text-align:center;background:rgba(18,20,28,.65);border:1px solid rgba(99,102,241,.12);border-radius:1rem;padding:2rem 1.5rem;box-shadow:0 4px 20px rgba(0,0,0,.2)}
-.demo-feedback-card h3{font-size:1.25rem;font-weight:700;color:#f0f2f7;margin:0 0 .75rem}
-.demo-feedback-card p{color:#94a3b8;font-size:.9rem;line-height:1.65;max-width:540px;margin:0 auto 1.5rem}
-.demo-feedback-btn{display:inline-flex;align-items:center;gap:.5rem;background:rgba(37,99,235,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd;font-weight:600;font-size:.9375rem;padding:.75rem 1.75rem;border-radius:.75rem;text-decoration:none;transition:all .2s}
-.demo-feedback-btn:hover{background:rgba(37,99,235,.25);border-color:rgba(59,130,246,.5)}
+.demo-tab{
+  display:inline-flex;
+  flex:1 1 0;
+  min-height:46px;
+  min-width:0;
+  align-items:center;
+  justify-content:center;
+  gap:.5rem;
+  border:1px solid transparent;
+  border-radius:12px;
+  background:transparent;
+  color:#94a3b8;
+  font-family:inherit;
+  font-size:.9rem;
+  font-weight:900;
+  cursor:pointer;
+  transition:all .18s ease;
+}
 
-/* ── disclaimer ── */
-.demo-disclaimer{background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:.75rem;padding:1.15rem 1.5rem;text-align:center;font-size:.85rem;color:#94a3b8;line-height:1.6}
+.demo-tab-active{
+  border-color:rgba(139,92,246,.35);
+  background:linear-gradient(135deg,rgba(79,70,229,.3),rgba(147,51,234,.22));
+  color:#fff;
+  box-shadow:0 16px 42px -34px rgba(139,92,246,.9);
+}
 
-/* ── footer ── */
-.demo-footer{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;gap:.65rem;padding:2rem 1.5rem 3rem;border-top:1px solid rgba(255,255,255,.04)}
-.demo-footer span{font-size:.8rem;color:#475569}
+.demo-section{
+  width:min(1120px,calc(100% - 2rem));
+  margin:0 auto;
+  padding:2.2rem 0 3.5rem;
+}
 
-/* ── mobile ── */
+.demo-section-heading{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:.7rem;
+  margin-bottom:1.35rem;
+}
+
+.demo-section-heading h2{
+  margin:0;
+  max-width:800px;
+  color:#fff;
+  font-size:clamp(1.7rem,3.6vw,3rem);
+  line-height:1.08;
+  font-weight:950;
+  letter-spacing:0;
+}
+
+.demo-section-heading p{
+  max-width:760px;
+  margin:0;
+  color:#a8b3c7;
+  font-size:1rem;
+  line-height:1.7;
+  font-weight:560;
+}
+
+.demo-access-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+}
+
+.demo-access-card,.demo-guide-card,.demo-v2-card,.demo-roadmap,.demo-v2-intro,.demo-role-panel,.demo-info-strip{
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(15,23,42,.58);
+  box-shadow:0 24px 70px -52px rgba(0,0,0,.95);
+  backdrop-filter:blur(18px);
+}
+
+.demo-access-card{
+  min-width:0;
+  border-top:3px solid var(--profile-accent);
+  border-radius:18px;
+  padding:1.15rem;
+}
+
+.demo-access-card-header{
+  display:flex;
+  gap:.9rem;
+  align-items:flex-start;
+}
+
+.demo-icon-shell,.demo-v2-icon{
+  display:inline-flex;
+  flex:0 0 auto;
+  width:48px;
+  height:48px;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;
+  color:#ddd6fe;
+  background:rgba(139,92,246,.15);
+}
+
+.demo-access-card h3,.demo-role-panel h3,.demo-guide-card h3,.demo-v2-card h3,.demo-roadmap h3{
+  margin:0;
+  color:#fff;
+  font-size:1.1rem;
+  line-height:1.25;
+  font-weight:950;
+}
+
+.demo-access-card-header p,.demo-role-panel p,.demo-v2-card p,.demo-v2-intro p,.demo-roadmap p,.demo-info-strip p{
+  margin:.4rem 0 0;
+  color:#a8b3c7;
+  line-height:1.62;
+  font-size:.92rem;
+  font-weight:560;
+}
+
+.demo-login-box{
+  display:grid;
+  gap:.75rem;
+  margin:1rem 0;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  background:rgba(2,6,23,.46);
+  padding:.9rem;
+}
+
+.demo-login-row{
+  display:grid;
+  gap:.38rem;
+}
+
+.demo-login-row>span{
+  color:#64748b;
+  font-size:.72rem;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.demo-login-value{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+  align-items:center;
+  min-width:0;
+}
+
+.demo-login-value code{
+  max-width:100%;
+  overflow-wrap:anywhere;
+  border:1px solid rgba(99,102,241,.22);
+  border-radius:9px;
+  background:rgba(99,102,241,.1);
+  color:#e5e7eb;
+  padding:.33rem .55rem;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  font-size:.86rem;
+  font-weight:800;
+}
+
+.demo-copy-button{
+  display:inline-flex;
+  min-height:34px;
+  align-items:center;
+  gap:.35rem;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:9px;
+  background:rgba(255,255,255,.04);
+  color:#dbeafe;
+  padding:0 .6rem;
+  font-family:inherit;
+  font-size:.76rem;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.demo-profile-action{
+  width:100%;
+  min-height:44px;
+  color:#fff;
+  background:var(--profile-accent);
+}
+
+.demo-highlight-list{
+  display:grid;
+  gap:.45rem;
+  margin-top:1rem;
+}
+
+.demo-highlight-list>span{
+  color:#64748b;
+  font-size:.72rem;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.demo-highlight-list p,.demo-check-list p{
+  display:flex;
+  align-items:flex-start;
+  gap:.5rem;
+  margin:0;
+  color:#cbd5e1;
+  font-size:.86rem;
+  line-height:1.48;
+  font-weight:650;
+}
+
+.demo-highlight-list svg,.demo-check-list svg{
+  flex:0 0 auto;
+  color:#818cf8;
+  margin-top:.12rem;
+}
+
+.demo-role-panel{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+  margin-top:1rem;
+  border-radius:18px;
+  padding:1rem;
+}
+
+.demo-role-panel>div{
+  min-width:0;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  background:rgba(255,255,255,.025);
+  padding:1rem;
+}
+
+.demo-role-panel svg{
+  color:#a78bfa;
+  margin-bottom:.65rem;
+}
+
+.demo-guide-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);
+  gap:1rem;
+}
+
+.demo-guide-card,.demo-roadmap{
+  border-radius:18px;
+  padding:1rem;
+}
+
+.demo-step-list{
+  display:grid;
+  gap:.55rem;
+  margin:1rem 0 0;
+  padding:0;
+  list-style:none;
+}
+
+.demo-step-list li{
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr);
+  gap:.65rem;
+  align-items:start;
+  min-width:0;
+}
+
+.demo-step-list li>span{
+  display:flex;
+  width:32px;
+  height:32px;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:linear-gradient(135deg,#4f46e5,#9333ea);
+  color:#fff;
+  font-size:.78rem;
+  font-weight:950;
+}
+
+.demo-step-list p{
+  min-width:0;
+  margin:0;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  background:rgba(2,6,23,.35);
+  color:#dbe4f0;
+  padding:.55rem .7rem;
+  font-size:.9rem;
+  line-height:1.5;
+  font-weight:650;
+}
+
+.demo-check-list{
+  display:grid;
+  gap:.65rem;
+  margin-top:1rem;
+}
+
+.demo-info-strip{
+  display:flex;
+  gap:.75rem;
+  align-items:flex-start;
+  margin-top:1rem;
+  border-radius:16px;
+  padding:1rem;
+  color:#fde68a;
+  background:rgba(245,158,11,.1);
+  border-color:rgba(245,158,11,.22);
+}
+
+.demo-info-strip svg{
+  flex:0 0 auto;
+  margin-top:.12rem;
+}
+
+.demo-v2-intro{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr);
+  gap:.85rem;
+  align-items:start;
+  border-radius:18px;
+  padding:1rem;
+  margin-bottom:1rem;
+}
+
+.demo-v2-intro svg{
+  color:#c4b5fd;
+}
+
+.demo-v2-intro strong{
+  grid-column:2;
+  color:#e0e7ff;
+  font-size:.92rem;
+  line-height:1.55;
+}
+
+.demo-v2-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+}
+
+.demo-v2-card{
+  min-width:0;
+  border-radius:18px;
+  padding:1rem;
+}
+
+.demo-v2-card-top{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr);
+  gap:.85rem;
+  align-items:start;
+}
+
+.demo-badge-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem;
+  margin-bottom:.55rem;
+}
+
+.demo-badge-row span{
+  border:1px solid rgba(139,92,246,.24);
+  border-radius:999px;
+  background:rgba(139,92,246,.12);
+  color:#c4b5fd;
+  padding:.2rem .48rem;
+  font-size:.68rem;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.demo-v2-summary{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.65rem;
+  margin-top:1rem;
+}
+
+.demo-v2-summary>div{
+  min-width:0;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:13px;
+  background:rgba(255,255,255,.025);
+  padding:.8rem;
+}
+
+.demo-v2-summary strong{
+  display:block;
+  color:#fff;
+  font-size:.78rem;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.demo-expand-button{
+  width:100%;
+  min-height:42px;
+  margin-top:.9rem;
+  color:#fff;
+  border:1px solid rgba(139,92,246,.3);
+  background:rgba(139,92,246,.16);
+}
+
+.demo-expand-button svg{
+  transition:transform .18s ease;
+}
+
+.demo-expand-icon-open{
+  transform:translateX(.2rem);
+}
+
+.demo-v2-details{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+  margin-top:1rem;
+  border-top:1px solid rgba(255,255,255,.1);
+  padding-top:1rem;
+}
+
+.demo-v2-details h4{
+  margin:0;
+  color:#fff;
+  font-size:.93rem;
+  font-weight:950;
+}
+
+.demo-roadmap{
+  margin-top:1rem;
+}
+
+.demo-roadmap-header{
+  display:flex;
+  gap:.85rem;
+  align-items:flex-start;
+}
+
+.demo-roadmap-header svg{
+  flex:0 0 auto;
+  color:#c4b5fd;
+}
+
+.demo-roadmap-footer{
+  border-top:1px solid rgba(255,255,255,.1);
+  padding-top:1rem;
+}
+
+.demo-footer{
+  display:flex;
+  flex-direction:column;
+  gap:.75rem;
+  align-items:center;
+  justify-content:center;
+  width:min(1120px,calc(100% - 2rem));
+  margin:0 auto;
+  border-top:1px solid rgba(255,255,255,.08);
+  padding:2rem 0 2.5rem;
+  color:#64748b;
+  font-size:.84rem;
+  font-weight:650;
+  text-align:center;
+}
+
+@media(max-width:860px){
+  .demo-access-grid,.demo-role-panel,.demo-guide-layout,.demo-v2-grid,.demo-v2-details{
+    grid-template-columns:1fr;
+  }
+
+  .demo-v2-summary{
+    grid-template-columns:1fr;
+  }
+}
+
 @media(max-width:640px){
-  .demo-hero{padding:2rem 1rem 1rem}
-  .demo-section{padding:2rem 1rem}
-  .demo-access-card{padding:1.25rem}
-  .demo-flow-step{min-width:100%}
+  .demo-topbar{
+    width:calc(100% - 1rem);
+  }
+
+  .demo-topbar img,.demo-footer img{
+    height:28px;
+  }
+
+  .demo-topbar-link{
+    min-height:38px;
+    padding:0 .7rem;
+    font-size:.78rem;
+  }
+
+  .demo-hero,.demo-section,.demo-tabs,.demo-footer{
+    width:calc(100% - 1rem);
+  }
+
+  .demo-hero{
+    padding:2.1rem 0 1rem;
+  }
+
+  .demo-hero h1{
+    font-size:clamp(2.2rem,14vw,3.1rem);
+  }
+
+  .demo-hero-actions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  .demo-primary-action,.demo-secondary-action{
+    width:100%;
+  }
+
+  .demo-tabs{
+    position:relative;
+    top:auto;
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  .demo-tab{
+    justify-content:flex-start;
+    padding:0 .85rem;
+  }
+
+  .demo-section{
+    padding:1.45rem 0 2.4rem;
+  }
+
+  .demo-access-card,.demo-guide-card,.demo-v2-card,.demo-roadmap,.demo-v2-intro,.demo-role-panel,.demo-info-strip{
+    border-radius:14px;
+  }
+
+  .demo-access-card-header,.demo-v2-card-top{
+    grid-template-columns:1fr;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .demo-v2-intro{
+    grid-template-columns:1fr;
+  }
+
+  .demo-v2-intro strong{
+    grid-column:auto;
+  }
+
+  .demo-login-value{
+    align-items:stretch;
+  }
+
+  .demo-copy-button{
+    justify-content:center;
+  }
 }
 `;
